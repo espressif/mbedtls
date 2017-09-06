@@ -37,6 +37,7 @@
 
 #include "mbedtls/platform.h"
 
+#if !defined(MBEDTLS_BIGNUM_ALT)
 #define MPI_VALIDATE_RET(cond)                                       \
     MBEDTLS_INTERNAL_VALIDATE_RET(cond, MBEDTLS_ERR_MPI_BAD_INPUT_DATA)
 #define MPI_VALIDATE(cond)                                           \
@@ -1467,6 +1468,7 @@ void mpi_mul_hlp(size_t i,
     }
 }
 
+#if !defined(MBEDTLS_MPI_MUL_MPI_ALT)
 /*
  * Baseline multiplication: X = A * B  (HAC 14.12)
  */
@@ -1568,6 +1570,7 @@ int mbedtls_mpi_mul_int(mbedtls_mpi *X, const mbedtls_mpi *A, mbedtls_mpi_uint b
 cleanup:
     return ret;
 }
+#endif
 
 /*
  * Unsigned integer divide - double mbedtls_mpi_uint dividend, u1/u0, and
@@ -1970,6 +1973,23 @@ void mbedtls_mpi_montmul(mbedtls_mpi *A,
     mbedtls_ct_mpi_uint_cond_assign(n, A->p, d, (unsigned char) d[n]);
 }
 
+int mbedtls_mpi_get_mont_r2_unsafe(mbedtls_mpi *X,
+                                   const mbedtls_mpi *N)
+{
+    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+
+    MBEDTLS_MPI_CHK(mbedtls_mpi_lset(X, 1));
+    MBEDTLS_MPI_CHK(mbedtls_mpi_shift_l(X, N->n * 2 * biL));
+    MBEDTLS_MPI_CHK(mbedtls_mpi_mod_mpi(X, X, N));
+    MBEDTLS_MPI_CHK(mbedtls_mpi_shrink(X, N->n));
+
+cleanup:
+    return ret;
+}
+
+
+#if !defined(MBEDTLS_MPI_EXP_MOD_ALT)
+
 /*
  * Montgomery reduction: A = A * R^-1 mod N
  *
@@ -2012,20 +2032,6 @@ static int mpi_select(mbedtls_mpi *R, const mbedtls_mpi *T, size_t T_size, size_
                                                      (unsigned char) mbedtls_ct_size_bool_eq(i,
                                                                                              idx)));
     }
-
-cleanup:
-    return ret;
-}
-
-int mbedtls_mpi_get_mont_r2_unsafe(mbedtls_mpi *X,
-                                   const mbedtls_mpi *N)
-{
-    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
-
-    MBEDTLS_MPI_CHK(mbedtls_mpi_lset(X, 1));
-    MBEDTLS_MPI_CHK(mbedtls_mpi_shift_l(X, N->n * 2 * biL));
-    MBEDTLS_MPI_CHK(mbedtls_mpi_mod_mpi(X, X, N));
-    MBEDTLS_MPI_CHK(mbedtls_mpi_shrink(X, N->n));
 
 cleanup:
     return ret;
@@ -2326,6 +2332,7 @@ cleanup:
 
     return ret;
 }
+#endif
 
 /*
  * Greatest common divisor: G = gcd(A, B)  (HAC 14.54)
@@ -2998,6 +3005,7 @@ cleanup:
 }
 
 #endif /* MBEDTLS_GENPRIME */
+#endif /* MBEDTLS_BIGNUM_ALT */
 
 #if defined(MBEDTLS_SELF_TEST)
 

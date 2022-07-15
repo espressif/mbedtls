@@ -197,8 +197,6 @@ endfunction(get_name_without_last_ext)
 
 include(CheckCCompilerFlag)
 
-set(CMAKE_C_EXTENSIONS OFF)
-set(CMAKE_C_STANDARD 99)
 
 if(CMAKE_COMPILER_IS_GNU)
     # some warnings we want are not available with old GCC versions

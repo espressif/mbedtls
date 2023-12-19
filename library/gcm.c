@@ -39,7 +39,33 @@
 #include "aesce.h"
 #endif
 
-#if !defined(MBEDTLS_GCM_ALT)
+#if defined(MBEDTLS_GCM_NON_AES_CIPHER_SOFT_FALLBACK)
+
+#undef mbedtls_gcm_context
+#undef mbedtls_gcm_init
+#undef mbedtls_gcm_setkey
+#undef mbedtls_gcm_starts
+#undef mbedtls_gcm_update_ad
+#undef mbedtls_gcm_update
+#undef mbedtls_gcm_finish
+#undef mbedtls_gcm_crypt_and_tag
+#undef mbedtls_gcm_auth_decrypt
+#undef mbedtls_gcm_free
+
+#define mbedtls_gcm_context         mbedtls_gcm_context_soft
+#define mbedtls_gcm_init            mbedtls_gcm_init_soft
+#define mbedtls_gcm_setkey          mbedtls_gcm_setkey_soft
+#define mbedtls_gcm_starts          mbedtls_gcm_starts_soft
+#define mbedtls_gcm_update_ad       mbedtls_gcm_update_ad_soft
+#define mbedtls_gcm_update          mbedtls_gcm_update_soft
+#define mbedtls_gcm_finish          mbedtls_gcm_finish_soft
+#define mbedtls_gcm_crypt_and_tag   mbedtls_gcm_crypt_and_tag_soft
+#define mbedtls_gcm_auth_decrypt    mbedtls_gcm_auth_decrypt_soft
+#define mbedtls_gcm_free            mbedtls_gcm_free_soft
+
+#endif
+
+#if !defined(MBEDTLS_GCM_ALT) || defined(MBEDTLS_GCM_NON_AES_CIPHER_SOFT_FALLBACK)
 
 /* Used to select the acceleration mechanism */
 #define MBEDTLS_GCM_ACC_SMALLTABLE  0
@@ -780,7 +806,7 @@ void mbedtls_gcm_free(mbedtls_gcm_context *ctx)
     mbedtls_platform_zeroize(ctx, sizeof(mbedtls_gcm_context));
 }
 
-#endif /* !MBEDTLS_GCM_ALT */
+#endif /* !defined(MBEDTLS_GCM_ALT) || defined(MBEDTLS_GCM_NON_AES_CIPHER_SOFT_FALLBACK) */
 
 #if defined(MBEDTLS_SELF_TEST) && defined(MBEDTLS_CCM_GCM_CAN_AES)
 /*

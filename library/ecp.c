@@ -2633,9 +2633,9 @@ cleanup:
  */
 #if defined(MBEDTLS_ECP_MUL_ALT_SOFT_FALLBACK)
 int ecp_mul_restartable_internal_soft(mbedtls_ecp_group *grp, mbedtls_ecp_point *R,
-                                    const mbedtls_mpi *m, const mbedtls_ecp_point *P,
-                                    int (*f_rng)(void *, unsigned char *, size_t), void *p_rng,
-                                    mbedtls_ecp_restart_ctx *rs_ctx)
+                                      const mbedtls_mpi *m, const mbedtls_ecp_point *P,
+                                      int (*f_rng)(void *, unsigned char *, size_t), void *p_rng,
+                                      mbedtls_ecp_restart_ctx *rs_ctx)
 #else
 static int ecp_mul_restartable_internal(mbedtls_ecp_group *grp, mbedtls_ecp_point *R,
                                         const mbedtls_mpi *m, const mbedtls_ecp_point *P,
@@ -3051,7 +3051,7 @@ static int ecp_check_pubkey_mx(const mbedtls_ecp_group *grp, const mbedtls_ecp_p
  */
 #if defined(MBEDTLS_ECP_VERIFY_ALT_SOFT_FALLBACK)
 int mbedtls_ecp_check_pubkey_soft(const mbedtls_ecp_group *grp,
-                                const mbedtls_ecp_point *pt)
+                                  const mbedtls_ecp_point *pt)
 #else
 int mbedtls_ecp_check_pubkey(const mbedtls_ecp_group *grp,
                              const mbedtls_ecp_point *pt)

@@ -1623,8 +1623,8 @@ int mbedtls_mpi_exp_mod(mbedtls_mpi *X, const mbedtls_mpi *A,
                         mbedtls_mpi *prec_RR)
 #else
 int mbedtls_mpi_exp_mod_soft(mbedtls_mpi *X, const mbedtls_mpi *A,
-                        const mbedtls_mpi *E, const mbedtls_mpi *N,
-                        mbedtls_mpi *prec_RR)
+                             const mbedtls_mpi *E, const mbedtls_mpi *N,
+                             mbedtls_mpi *prec_RR)
 #endif
 {
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;

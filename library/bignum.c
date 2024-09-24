@@ -1614,6 +1614,14 @@ int mbedtls_mpi_mod_int(mbedtls_mpi_uint *r, const mbedtls_mpi *A, mbedtls_mpi_s
 }
 
 /*
+ * MbedTLS has added new software API mbedtls_mpi_exp_mod_optionally_safe().
+ * This API handles RSA public operations in non-constant time manner (and hence efficient),
+ * but for the hardware MPI case, we fallback to the `mbedtls_mpi_exp_mod()` implementation itself
+ * and hence disabling it here.
+ */
+#if !defined(MBEDTLS_MPI_EXP_MOD_ALT)
+
+/*
  * Warning! If the parameter E_public has MBEDTLS_MPI_IS_PUBLIC as its value,
  * this function is not constant time with respect to the exponent (parameter E).
  */
@@ -1731,8 +1739,6 @@ cleanup:
     return ret;
 }
  
-#if !defined(MBEDTLS_MPI_EXP_MOD_ALT)
- 
 /*
 * Sliding-window exponentiation: X = A^E mod N  (HAC 14.85)
 */
@@ -1754,7 +1760,16 @@ int mbedtls_mpi_exp_mod_unsafe(mbedtls_mpi *X, const mbedtls_mpi *A,
                                const mbedtls_mpi *E, const mbedtls_mpi *N,
                                mbedtls_mpi *prec_RR)
 {
+
+/*
+ * If hardware is enabled, we use MPI crypto layer implementation,
+ * else we use mbedtls implementation.
+ */
+#if defined(MBEDTLS_MPI_EXP_MOD_ALT)
+    return mbedtls_mpi_exp_mod(X, A, E, N, prec_RR);
+#else
     return mbedtls_mpi_exp_mod_optionally_safe(X, A, E, MBEDTLS_MPI_IS_PUBLIC, N, prec_RR);
+#endif
 }
  
 

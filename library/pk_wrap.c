@@ -1295,7 +1295,7 @@ const mbedtls_pk_info_t mbedtls_ecdsa_info = {
 
 static int rsa_alt_can_do(mbedtls_pk_type_t type)
 {
-    return type == MBEDTLS_PK_RSA;
+    return (type == MBEDTLS_PK_RSA) || (type == MBEDTLS_PK_RSASSA_PSS);
 }
 
 static size_t rsa_alt_get_bitlen(mbedtls_pk_context *pk)

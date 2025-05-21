@@ -1344,15 +1344,15 @@ int mbedtls_pk_sign_ext(mbedtls_pk_type_t pk_type,
                                        sig, sig_size, sig_len);
 #else /* MBEDTLS_USE_PSA_CRYPTO */
 
-#if defined(MBEDTLS_PK_RSA_ALT_SUPPORT)
-
-    mbedtls_rsa_alt_context *rsa_alt = ctx->pk_ctx;
-    mbedtls_rsa_context *rsa = (mbedtls_rsa_context *)rsa_alt->key;
-    mbedtls_rsa_set_padding(rsa, MBEDTLS_RSA_PKCS_V21, md_alg);
-    return mbedtls_pk_sign(ctx, md_alg, hash, hash_len,
-                        sig, sig_size, sig_len, f_rng, p_rng);
-
-#else
+    if (ctx->pk_info->type == MBEDTLS_PK_RSA_ALT) {
+        mbedtls_rsa_alt_context *rsa_alt = ctx->pk_ctx;
+        mbedtls_rsa_context *rsa = (mbedtls_rsa_context *)rsa_alt->key;
+        if (rsa != NULL) {
+            mbedtls_rsa_set_padding(rsa, MBEDTLS_RSA_PKCS_V21, md_alg);
+            return mbedtls_pk_sign(ctx, md_alg, hash, hash_len,
+                                sig, sig_size, sig_len, f_rng, p_rng);
+        }
+    }
 
     if (sig_size < mbedtls_pk_get_len(ctx)) {
         return MBEDTLS_ERR_PK_BUFFER_TOO_SMALL;
@@ -1370,7 +1370,6 @@ int mbedtls_pk_sign_ext(mbedtls_pk_type_t pk_type,
         *sig_len = rsa_ctx->len;
     }
     return ret;
-#endif /* MBEDTLS_PK_RSA_ALT_SUPPORT */
 
 #endif /* MBEDTLS_USE_PSA_CRYPTO */
 

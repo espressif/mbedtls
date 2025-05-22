@@ -18,7 +18,9 @@
 
 # We specify a minimum requirement of 3.10.2, but for now use 3.5.1 here
 # until our infrastructure catches up.
-cmake_minimum_required(VERSION 3.5.1)
+# Espressif: Updating the version to 3.10.2. CMake versions 
+#            older than 3.10 are getting deprecated
+cmake_minimum_required(VERSION 3.10.2)
 
 include(CMakePackageConfigHelpers)
 

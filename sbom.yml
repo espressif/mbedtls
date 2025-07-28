@@ -7,6 +7,10 @@ cve-keywords:
   - mbed tls
   - mbedtls
 cve-exclude-list:
+  - cve: CVE-2025-54764
+    reason: Fixed in 3.6.5
+  - cve: CVE-2025-59438
+    reason: Fixed in 3.6.5
   - cve: CVE-2025-52496
     reason: Fixed in 3.6.4
   - cve: CVE-2025-27810

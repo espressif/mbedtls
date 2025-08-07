@@ -1,0 +1,15 @@
+{
+    "prefix":       "esp_aes",
+    "type":         "transparent",
+    "mbedtls/h_condition":   "defined(ESP_AES_DRIVER_ENABLED)",
+    "headers":      ["../../../port/psa_driver/include/psa_crypto_driver_esp_aes.h"],
+    "capabilities": [
+        {
+            "mbedtls/c_condition": "defined(ESP_AES_DRIVER_ENABLED)",
+            "_comment": "This driver will support AES operations using the ESP hardware accelerator.",
+            "entry_points": ["cipher_encrypt", "cipher_decrypt"],
+            "algorithms": ["PSA_ALG_AES_CBC", "PSA_ALG_AES_GCM"],
+            "fallback": false
+        }
+    ]
+}

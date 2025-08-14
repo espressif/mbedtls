@@ -39,6 +39,10 @@
 #include "psa_crypto_driver_esp_sha_contexts.h"
 #endif
 
+#if defined(ESP_AES_DRIVER_ENABLED)
+#include "psa_crypto_driver_esp_aes_contexts.h"
+#endif
+
 #if defined(PSA_CRYPTO_DRIVER_TEST)
 
 #if defined(MBEDTLS_TEST_LIBTESTDRIVER1) && \
@@ -107,6 +111,9 @@ typedef union {
 #if defined(PSA_CRYPTO_DRIVER_TEST)
     mbedtls_transparent_test_driver_cipher_operation_t transparent_test_driver_ctx;
     mbedtls_opaque_test_driver_cipher_operation_t opaque_test_driver_ctx;
+#endif
+#if defined(ESP_AES_DRIVER_ENABLED)
+    esp_aes_operation_t esp_aes_ctx;
 #endif
 } psa_driver_cipher_context_t;
 

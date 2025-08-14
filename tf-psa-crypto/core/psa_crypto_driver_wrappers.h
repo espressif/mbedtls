@@ -49,6 +49,12 @@
 /* Headers for esp_aes transparent driver */
 #if defined(ESP_AES_DRIVER_ENABLED)
 #include "../../../port/psa_driver/include/psa_crypto_driver_esp_aes.h"
+#include "../../../port/psa_driver/include/psa_crypto_driver_esp_aes_gcm.h"
+
+#endif
+/* Headers for esp_cmac transparent driver */
+#if defined(ESP_AES_DRIVER_ENABLED)
+#include "../../../port/psa_driver/include/psa_crypto_driver_esp_cmac.h"
 
 #endif
 
@@ -64,6 +70,7 @@
 #define P256_TRANSPARENT_DRIVER_ID (4)
 #define ESP_SHA_TRANSPARENT_DRIVER_ID (5)
 #define ESP_AES_TRANSPARENT_DRIVER_ID (6)
+#define ESP_CMAC_TRANSPARENT_DRIVER_ID (7)
 
 /* END-driver id */
 
@@ -815,6 +822,7 @@ static inline psa_status_t psa_driver_wrapper_import_key(
 
 
 
+
 #endif /* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */
 
             /* Fell through, meaning no accelerator supports this operation */
@@ -976,7 +984,7 @@ static inline psa_status_t psa_driver_wrapper_cipher_encrypt(
                 return( status );
 #endif /* PSA_CRYPTO_DRIVER_TEST */
 #if defined(ESP_AES_DRIVER_ENABLED)
-            status = esp_aes_cipher_encrypt(attributes,
+            return esp_aes_cipher_encrypt(attributes,
                                             key_buffer,
                                             key_buffer_size,
                                             alg,
@@ -1063,7 +1071,7 @@ static inline psa_status_t psa_driver_wrapper_cipher_decrypt(
              * cycle through all known transparent accelerators */
 #if defined(PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT)
 #if defined(ESP_AES_DRIVER_ENABLED)
-            status = esp_aes_cipher_decrypt(attributes,
+            return esp_aes_cipher_decrypt(attributes,
                                             key_buffer,
                                             key_buffer_size,
                                             alg,
@@ -1150,6 +1158,17 @@ static inline psa_status_t psa_driver_wrapper_cipher_encrypt_setup(
             /* Key is stored in the slot in export representation, so
              * cycle through all known transparent accelerators */
 #if defined(PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT)
+#if defined(ESP_AES_DRIVER_ENABLED)
+            status = esp_aes_cipher_encrypt_setup( &operation->ctx.esp_aes_ctx,
+                                                       attributes,
+                                                       key_buffer,
+                                                       key_buffer_size,
+                                                       alg );
+            if (status == PSA_SUCCESS) {
+                operation->id = ESP_AES_TRANSPARENT_DRIVER_ID;
+            }
+            return status;
+#endif /* ESP_AES_DRIVER_ENABLED */
 #if defined(PSA_CRYPTO_DRIVER_TEST)
             status = mbedtls_test_transparent_cipher_encrypt_setup(
                 &operation->ctx.transparent_test_driver_ctx,
@@ -1223,6 +1242,17 @@ static inline psa_status_t psa_driver_wrapper_cipher_decrypt_setup(
             /* Key is stored in the slot in export representation, so
              * cycle through all known transparent accelerators */
 #if defined(PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT)
+#if defined(ESP_AES_DRIVER_ENABLED)
+            status = esp_aes_cipher_decrypt_setup( &operation->ctx.esp_aes_ctx,
+                                                       attributes,
+                                                       key_buffer,
+                                                       key_buffer_size,
+                                                       alg );
+            if (status == PSA_SUCCESS) {
+                operation->id = ESP_AES_TRANSPARENT_DRIVER_ID;
+            }
+            return status;
+#endif /* ESP_AES_DRIVER_ENABLED */
 #if defined(PSA_CRYPTO_DRIVER_TEST)
             status = mbedtls_test_transparent_cipher_decrypt_setup(
                 &operation->ctx.transparent_test_driver_ctx,
@@ -1295,6 +1325,12 @@ static inline psa_status_t psa_driver_wrapper_cipher_set_iv(
 #endif /* MBEDTLS_PSA_BUILTIN_CIPHER */
 
 #if defined(PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT)
+#if defined(ESP_AES_DRIVER_ENABLED)
+        case ESP_AES_TRANSPARENT_DRIVER_ID:
+            return( esp_aes_cipher_set_iv(
+                        &operation->ctx.esp_aes_ctx,
+                        iv, iv_length ) );
+#endif /* ESP_AES_DRIVER_ENABLED */
 #if defined(PSA_CRYPTO_DRIVER_TEST)
         case MBEDTLS_TEST_TRANSPARENT_DRIVER_ID:
             return( mbedtls_test_transparent_cipher_set_iv(
@@ -1336,6 +1372,15 @@ static inline psa_status_t psa_driver_wrapper_cipher_update(
 #endif /* MBEDTLS_PSA_BUILTIN_CIPHER */
 
 #if defined(PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT)
+#if defined(ESP_AES_DRIVER_ENABLED)
+        case ESP_AES_TRANSPARENT_DRIVER_ID:
+            return( esp_aes_cipher_update( &operation->ctx.esp_aes_ctx,
+                                               input,
+                                               input_length,
+                                               output,
+                                               output_size,
+                                               output_length ) );
+#endif /* ESP_AES_DRIVER_ENABLED */
 #if defined(PSA_CRYPTO_DRIVER_TEST)
         case MBEDTLS_TEST_TRANSPARENT_DRIVER_ID:
             return( mbedtls_test_transparent_cipher_update(
@@ -1378,6 +1423,13 @@ static inline psa_status_t psa_driver_wrapper_cipher_finish(
 #endif /* MBEDTLS_PSA_BUILTIN_CIPHER */
 
 #if defined(PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT)
+#if defined(ESP_AES_DRIVER_ENABLED)
+        case ESP_AES_TRANSPARENT_DRIVER_ID:
+            return( esp_aes_cipher_finish( &operation->ctx.esp_aes_ctx,
+                                               output,
+                                               output_size,
+                                               output_length ) );
+#endif /* ESP_AES_DRIVER_ENABLED */
 #if defined(PSA_CRYPTO_DRIVER_TEST)
         case MBEDTLS_TEST_TRANSPARENT_DRIVER_ID:
             return( mbedtls_test_transparent_cipher_finish(
@@ -1412,6 +1464,10 @@ static inline psa_status_t psa_driver_wrapper_cipher_abort(
 #endif /* MBEDTLS_PSA_BUILTIN_CIPHER */
 
 #if defined(PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT)
+#if defined(ESP_AES_DRIVER_ENABLED)
+        case ESP_AES_TRANSPARENT_DRIVER_ID:
+            return( esp_aes_cipher_abort( &operation->ctx.esp_aes_ctx ) );
+#endif /* ESP_AES_DRIVER_ENABLED */
 #if defined(PSA_CRYPTO_DRIVER_TEST)
         case MBEDTLS_TEST_TRANSPARENT_DRIVER_ID:
             status = mbedtls_test_transparent_cipher_abort(
@@ -1541,6 +1597,14 @@ static inline psa_status_t psa_driver_wrapper_hash_clone(
             return( mbedtls_psa_hash_clone( &source_operation->ctx.mbedtls_ctx,
                                             &target_operation->ctx.mbedtls_ctx ) );
 #endif
+#if defined(PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT)
+#if defined(ESP_SHA_DRIVER_ENABLED)
+        case ESP_SHA_TRANSPARENT_DRIVER_ID:
+            target_operation->id = ESP_SHA_TRANSPARENT_DRIVER_ID;
+            return( esp_sha_hash_clone(
+                        &source_operation->ctx.esp_ctx, 
+                        &target_operation->ctx.esp_ctx ) );
+#endif /* ESP_SHA_DRIVER_ENABLED */
 #if defined(PSA_CRYPTO_DRIVER_TEST)
         case MBEDTLS_TEST_TRANSPARENT_DRIVER_ID:
             target_operation->id = MBEDTLS_TEST_TRANSPARENT_DRIVER_ID;
@@ -1548,6 +1612,7 @@ static inline psa_status_t psa_driver_wrapper_hash_clone(
                         &source_operation->ctx.test_driver_ctx,
                         &target_operation->ctx.test_driver_ctx ) );
 #endif
+#endif /* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */
         default:
             (void) target_operation;
             return( PSA_ERROR_BAD_STATE );
@@ -1668,6 +1733,21 @@ static inline psa_status_t psa_driver_wrapper_aead_encrypt(
              * cycle through all known transparent accelerators */
 
 #if defined(PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT)
+#if (defined(ESP_AES_DRIVER_ENABLED) && (MBEDTLS_HARDWARE_GCM))
+        status = esp_crypto_aes_gcm_encrypt(
+                    attributes, key_buffer, key_buffer_size,
+                    alg,
+                    nonce, nonce_length,
+                    additional_data, additional_data_length,
+                    plaintext, plaintext_length,
+                    ciphertext, ciphertext_size, ciphertext_length );
+#ifdef MBEDTLS_GCM_NON_AES_CIPHER_SOFT_FALLBACK
+            if( status != PSA_ERROR_NOT_SUPPORTED )
+#endif /* MBEDTLS_GCM_NON_AES_CIPHER_SOFT_FALLBACK */
+            {
+                return( status );
+            }
+#endif /* ESP_AES_DRIVER_ENABLED */
 #if defined(PSA_CRYPTO_DRIVER_TEST)
             status = mbedtls_test_transparent_aead_encrypt(
                          attributes, key_buffer, key_buffer_size,
@@ -1720,6 +1800,21 @@ static inline psa_status_t psa_driver_wrapper_aead_decrypt(
              * cycle through all known transparent accelerators */
 
 #if defined(PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT)
+#if (defined(ESP_AES_DRIVER_ENABLED) && (MBEDTLS_HARDWARE_GCM))
+            status = esp_crypto_aes_gcm_decrypt(
+                    attributes, key_buffer, key_buffer_size,
+                    alg,
+                    nonce, nonce_length,
+                    additional_data, additional_data_length,
+                    ciphertext, ciphertext_length,
+                    plaintext, plaintext_size, plaintext_length );
+#ifdef MBEDTLS_GCM_NON_AES_CIPHER_SOFT_FALLBACK
+            if( status != PSA_ERROR_NOT_SUPPORTED )
+#endif /* MBEDTLS_GCM_NON_AES_CIPHER_SOFT_FALLBACK */
+            {
+                return( status );
+            }
+#endif /* ESP_AES_DRIVER_ENABLED */
 #if defined(PSA_CRYPTO_DRIVER_TEST)
             status = mbedtls_test_transparent_aead_decrypt(
                         attributes, key_buffer, key_buffer_size,
@@ -1769,6 +1864,24 @@ static inline psa_status_t psa_driver_wrapper_aead_encrypt_setup(
              * cycle through all known transparent accelerators */
 
 #if defined(PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT)
+
+#if (defined(ESP_AES_DRIVER_ENABLED) && (MBEDTLS_HARDWARE_GCM))
+            status = esp_crypto_aes_gcm_encrypt_setup(
+                    &operation->ctx.esp_aes_gcm_ctx,
+                    attributes, key_buffer, key_buffer_size,
+                    alg);
+
+            if (status == PSA_SUCCESS) {
+                operation->id = ESP_AES_TRANSPARENT_DRIVER_ID;
+            }
+
+#ifdef MBEDTLS_GCM_NON_AES_CIPHER_SOFT_FALLBACK
+            if( status != PSA_ERROR_NOT_SUPPORTED )
+#endif /* MBEDTLS_GCM_NON_AES_CIPHER_SOFT_FALLBACK */
+            {
+                return( status );
+            }
+#endif /* ESP_AES_DRIVER_ENABLED */
 #if defined(PSA_CRYPTO_DRIVER_TEST)
             operation->id = MBEDTLS_TEST_TRANSPARENT_DRIVER_ID;
             status = mbedtls_test_transparent_aead_encrypt_setup(
@@ -1817,6 +1930,23 @@ static inline psa_status_t psa_driver_wrapper_aead_decrypt_setup(
              * cycle through all known transparent accelerators */
 
 #if defined(PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT)
+#if (defined(ESP_AES_DRIVER_ENABLED) && (MBEDTLS_HARDWARE_GCM))
+            status = esp_crypto_aes_gcm_decrypt_setup(
+                    &operation->ctx.esp_aes_gcm_ctx,
+                    attributes, key_buffer, key_buffer_size,
+                    alg);
+
+            if (status == PSA_SUCCESS) {
+                operation->id = ESP_AES_TRANSPARENT_DRIVER_ID;
+            }
+
+#ifdef MBEDTLS_GCM_NON_AES_CIPHER_SOFT_FALLBACK
+            if( status != PSA_ERROR_NOT_SUPPORTED )
+#endif /* MBEDTLS_GCM_NON_AES_CIPHER_SOFT_FALLBACK */
+            {
+                return( status );
+            }
+#endif /* ESP_AES_DRIVER_ENABLED */
 #if defined(PSA_CRYPTO_DRIVER_TEST)
             operation->id = MBEDTLS_TEST_TRANSPARENT_DRIVER_ID;
             status = mbedtls_test_transparent_aead_decrypt_setup(
@@ -1866,6 +1996,14 @@ static inline psa_status_t psa_driver_wrapper_aead_set_nonce(
 #endif /* MBEDTLS_PSA_BUILTIN_AEAD */
 
 #if defined(PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT)
+
+#if (defined(ESP_AES_DRIVER_ENABLED) && (MBEDTLS_HARDWARE_GCM))
+        case ESP_AES_TRANSPARENT_DRIVER_ID:
+            return esp_crypto_aes_gcm_set_nonce(
+                    &operation->ctx.esp_aes_gcm_ctx,
+                    nonce,
+                    nonce_length);
+#endif /* ESP_AES_DRIVER_ENABLED */
 #if defined(PSA_CRYPTO_DRIVER_TEST)
         case MBEDTLS_TEST_TRANSPARENT_DRIVER_ID:
             return( mbedtls_test_transparent_aead_set_nonce(
@@ -1900,6 +2038,10 @@ static inline psa_status_t psa_driver_wrapper_aead_set_lengths(
 #endif /* MBEDTLS_PSA_BUILTIN_AEAD */
 
 #if defined(PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT)
+#if defined(ESP_AES_DRIVER_ENABLED)
+        case ESP_AES_TRANSPARENT_DRIVER_ID:
+            return PSA_SUCCESS;
+#endif /* ESP_AES_DRIVER_ENABLED */
 #if defined(PSA_CRYPTO_DRIVER_TEST)
         case MBEDTLS_TEST_TRANSPARENT_DRIVER_ID:
             return( mbedtls_test_transparent_aead_set_lengths(
@@ -1934,6 +2076,13 @@ static inline psa_status_t psa_driver_wrapper_aead_update_ad(
 #endif /* MBEDTLS_PSA_BUILTIN_AEAD */
 
 #if defined(PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT)
+#if (defined(ESP_AES_DRIVER_ENABLED) && (MBEDTLS_HARDWARE_GCM))
+        case ESP_AES_TRANSPARENT_DRIVER_ID:
+            return esp_crypto_aes_gcm_update_ad(
+                    &operation->ctx.esp_aes_gcm_ctx,
+                    input,
+                    input_length);
+#endif /* ESP_AES_DRIVER_ENABLED */
 #if defined(PSA_CRYPTO_DRIVER_TEST)
         case MBEDTLS_TEST_TRANSPARENT_DRIVER_ID:
             return( mbedtls_test_transparent_aead_update_ad(
@@ -1972,6 +2121,12 @@ static inline psa_status_t psa_driver_wrapper_aead_update(
 #endif /* MBEDTLS_PSA_BUILTIN_AEAD */
 
 #if defined(PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT)
+#if (defined(ESP_AES_DRIVER_ENABLED) && (MBEDTLS_HARDWARE_GCM))
+        case ESP_AES_TRANSPARENT_DRIVER_ID:
+            return esp_crypto_aes_gcm_update(
+                    &operation->ctx.esp_aes_gcm_ctx,
+                    input, input_length, output, output_size, output_length);
+#endif /* ESP_AES_DRIVER_ENABLED */
 #if defined(PSA_CRYPTO_DRIVER_TEST)
         case MBEDTLS_TEST_TRANSPARENT_DRIVER_ID:
             return( mbedtls_test_transparent_aead_update(
@@ -2016,6 +2171,13 @@ static inline psa_status_t psa_driver_wrapper_aead_finish(
 #endif /* MBEDTLS_PSA_BUILTIN_AEAD */
 
 #if defined(PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT)
+
+#if (defined(ESP_AES_DRIVER_ENABLED) && (MBEDTLS_HARDWARE_GCM))
+        case ESP_AES_TRANSPARENT_DRIVER_ID:
+            return esp_crypto_aes_gcm_finish(
+                    &operation->ctx.esp_aes_gcm_ctx,
+                    ciphertext, ciphertext_size, ciphertext_length, tag, tag_size, tag_length);
+#endif /* ESP_AES_DRIVER_ENABLED */
 #if defined(PSA_CRYPTO_DRIVER_TEST)
         case MBEDTLS_TEST_TRANSPARENT_DRIVER_ID:
             return( mbedtls_test_transparent_aead_finish(
@@ -2080,6 +2242,25 @@ static inline psa_status_t psa_driver_wrapper_aead_verify(
 #endif /* MBEDTLS_PSA_BUILTIN_AEAD */
 
 #if defined(PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT)
+#if (defined(ESP_AES_DRIVER_ENABLED) && (MBEDTLS_HARDWARE_GCM))
+        case ESP_AES_TRANSPARENT_DRIVER_ID:
+                psa_status_t status = PSA_ERROR_CORRUPTION_DETECTED;
+                uint8_t check_tag[PSA_AEAD_TAG_MAX_SIZE];
+                size_t check_tag_length;
+
+                status = esp_crypto_aes_gcm_finish(&operation->ctx.esp_aes_gcm_ctx,
+                            plaintext, plaintext_size, plaintext_length, check_tag, sizeof(check_tag), &check_tag_length);
+
+                if(status == PSA_SUCCESS) {
+                    if(tag_length != check_tag_length || mbedtls_ct_memcmp(tag, check_tag, tag_length) != 0) {
+                        status = PSA_ERROR_INVALID_SIGNATURE;
+                    }
+                }
+
+                mbedtls_platform_zeroize(check_tag, sizeof(check_tag));
+
+                return(status);
+#endif /* ESP_AES_DRIVER_ENABLED */
 #if defined(PSA_CRYPTO_DRIVER_TEST)
         case MBEDTLS_TEST_TRANSPARENT_DRIVER_ID:
             return( mbedtls_test_transparent_aead_verify(
@@ -2114,6 +2295,11 @@ static inline psa_status_t psa_driver_wrapper_aead_abort(
 #endif /* MBEDTLS_PSA_BUILTIN_AEAD */
 
 #if defined(PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT)
+
+#if (defined(ESP_AES_DRIVER_ENABLED) && (MBEDTLS_HARDWARE_GCM))
+        case ESP_AES_TRANSPARENT_DRIVER_ID:
+            return (esp_crypto_aes_gcm_abort(&operation->ctx.esp_aes_gcm_ctx));
+#endif /* ESP_AES_DRIVER_ENABLED */
 #if defined(PSA_CRYPTO_DRIVER_TEST)
         case MBEDTLS_TEST_TRANSPARENT_DRIVER_ID:
             return( mbedtls_test_transparent_aead_abort(
@@ -2152,6 +2338,11 @@ static inline psa_status_t psa_driver_wrapper_mac_compute(
             /* Key is stored in the slot in export representation, so
              * cycle through all known transparent accelerators */
 #if defined(PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT)
+#if defined(ESP_AES_DRIVER_ENABLED)
+            return (esp_cmac_mac_compute(attributes, key_buffer, key_buffer_size, alg,
+                input, input_length,
+                mac, mac_size, mac_length ));
+#endif /* ESP_AES_DRIVER_ENABLED */
 #if defined(PSA_CRYPTO_DRIVER_TEST)
             status = mbedtls_test_transparent_mac_compute(
                 attributes, key_buffer, key_buffer_size, alg,
@@ -2229,6 +2420,15 @@ static inline psa_status_t psa_driver_wrapper_mac_sign_setup(
             if( status != PSA_ERROR_NOT_SUPPORTED )
                 return( status );
 #endif /* PSA_CRYPTO_DRIVER_TEST */
+#if defined(ESP_AES_DRIVER_ENABLED)
+            status = (esp_cmac_mac_setup( &operation->ctx.esp_cmac_ctx,
+                                            attributes,
+                                            key_buffer, key_buffer_size,
+                                            alg ));
+            if( status == PSA_SUCCESS )
+                operation->id = ESP_CMAC_TRANSPARENT_DRIVER_ID;
+            return status;
+#endif /* ESP_AES_DRIVER_ENABLED */
 #endif /* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */
 #if defined(MBEDTLS_PSA_BUILTIN_MAC)
             /* Fell through, meaning no accelerator supports this operation */
@@ -2301,6 +2501,15 @@ static inline psa_status_t psa_driver_wrapper_mac_verify_setup(
             if( status != PSA_ERROR_NOT_SUPPORTED )
                 return( status );
 #endif /* PSA_CRYPTO_DRIVER_TEST */
+#if defined(ESP_AES_DRIVER_ENABLED)
+            status = (esp_cmac_mac_setup( &operation->ctx.esp_cmac_ctx,
+                                            attributes,
+                                            key_buffer, key_buffer_size,
+                                            alg ));
+            if( status == PSA_SUCCESS )
+                operation->id = ESP_CMAC_TRANSPARENT_DRIVER_ID;
+            return status;
+#endif /* ESP_AES_DRIVER_ENABLED */
 #endif /* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */
 #if defined(MBEDTLS_PSA_BUILTIN_MAC)
             /* Fell through, meaning no accelerator supports this operation */
@@ -2357,6 +2566,11 @@ static inline psa_status_t psa_driver_wrapper_mac_update(
 #endif /* MBEDTLS_PSA_BUILTIN_MAC */
 
 #if defined(PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT)
+#if defined(ESP_AES_DRIVER_ENABLED)
+        case ESP_CMAC_TRANSPARENT_DRIVER_ID:
+            return (esp_cmac_mac_update( &operation->ctx.esp_cmac_ctx,
+                                           input, input_length ));
+#endif /* ESP_AES_DRIVER_ENABLED */
 #if defined(PSA_CRYPTO_DRIVER_TEST)
         case MBEDTLS_TEST_TRANSPARENT_DRIVER_ID:
             return( mbedtls_test_transparent_mac_update(
@@ -2391,6 +2605,11 @@ static inline psa_status_t psa_driver_wrapper_mac_sign_finish(
 #endif /* MBEDTLS_PSA_BUILTIN_MAC */
 
 #if defined(PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT)
+#if defined(ESP_AES_DRIVER_ENABLED)
+        case ESP_CMAC_TRANSPARENT_DRIVER_ID:
+            return (esp_cmac_mac_finish( &operation->ctx.esp_cmac_ctx,
+                                           mac, mac_size, mac_length ));
+#endif /* ESP_AES_DRIVER_ENABLED */
 #if defined(PSA_CRYPTO_DRIVER_TEST)
         case MBEDTLS_TEST_TRANSPARENT_DRIVER_ID:
             return( mbedtls_test_transparent_mac_sign_finish(
@@ -2425,6 +2644,11 @@ static inline psa_status_t psa_driver_wrapper_mac_verify_finish(
 #endif /* MBEDTLS_PSA_BUILTIN_MAC */
 
 #if defined(PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT)
+#if defined(ESP_AES_DRIVER_ENABLED)
+        case ESP_CMAC_TRANSPARENT_DRIVER_ID:
+            return (esp_cmac_mac_verify_finish( &operation->ctx.esp_cmac_ctx,
+                                           mac, mac_length ));
+#endif /* ESP_AES_DRIVER_ENABLED */
 #if defined(PSA_CRYPTO_DRIVER_TEST)
         case MBEDTLS_TEST_TRANSPARENT_DRIVER_ID:
             return( mbedtls_test_transparent_mac_verify_finish(
@@ -2455,6 +2679,10 @@ static inline psa_status_t psa_driver_wrapper_mac_abort(
 #endif /* MBEDTLS_PSA_BUILTIN_MAC */
 
 #if defined(PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT)
+#if defined(ESP_AES_DRIVER_ENABLED)
+        case ESP_CMAC_TRANSPARENT_DRIVER_ID:
+            return (esp_cmac_mac_abort( &operation->ctx.esp_cmac_ctx ));
+#endif /* ESP_AES_DRIVER_ENABLED */
 #if defined(PSA_CRYPTO_DRIVER_TEST)
         case MBEDTLS_TEST_TRANSPARENT_DRIVER_ID:
             return( mbedtls_test_transparent_mac_abort(

@@ -48,6 +48,12 @@
 /* Headers for esp_aes transparent driver */
 #if defined(ESP_AES_DRIVER_ENABLED)
 #include "../../../port/psa_driver/include/psa_crypto_driver_esp_aes.h"
+#include "../../../port/psa_driver/include/psa_crypto_driver_esp_aes_gcm.h"
+
+#endif
+/* Headers for esp_cmac transparent driver */
+#if defined(ESP_AES_DRIVER_ENABLED)
+#include "../../../port/psa_driver/include/psa_crypto_driver_esp_cmac.h"
 
 #endif
 
@@ -63,6 +69,7 @@
 #define P256_TRANSPARENT_DRIVER_ID (4)
 #define ESP_SHA_TRANSPARENT_DRIVER_ID (5)
 #define ESP_AES_TRANSPARENT_DRIVER_ID (6)
+#define ESP_CMAC_TRANSPARENT_DRIVER_ID (7)
 
 /* END-driver id */
 

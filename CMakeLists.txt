@@ -68,7 +68,7 @@ endif()
 set(MBEDTLS_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(MBEDTLS_FRAMEWORK_DIR ${CMAKE_CURRENT_SOURCE_DIR}/framework)
 
-option(ENABLE_PROGRAMS "Build Mbed TLS programs." ON)
+option(ENABLE_PROGRAMS "Build Mbed TLS programs." OFF)
 
 option(MBEDTLS_FATAL_WARNINGS "Compiler warnings treated as errors" ON)
 if(CMAKE_HOST_WIN32)

@@ -186,7 +186,7 @@ endfunction(get_name_without_last_ext)
 include(CheckCCompilerFlag)
 
 set(CMAKE_C_EXTENSIONS OFF)
-set(CMAKE_C_STANDARD 99)
+# set(CMAKE_C_STANDARD 99)
 
 function(set_base_compile_options target)
     if(CMAKE_COMPILER_IS_GNU)

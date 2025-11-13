@@ -1,3 +1,0 @@
-[submodule "tf-psa-crypto"]
-	path = tf-psa-crypto
-	url = https://gitlab.espressif.cn:6688/espressif/TF-PSA-Crypto

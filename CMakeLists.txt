@@ -66,7 +66,7 @@ endif()
 
 # Set the project and framework root directory.
 set(MBEDTLS_DIR ${CMAKE_CURRENT_SOURCE_DIR})
-set(MBEDTLS_FRAMEWORK_DIR ${CMAKE_CURRENT_SOURCE_DIR}/framework)
+# set(MBEDTLS_FRAMEWORK_DIR ${CMAKE_CURRENT_SOURCE_DIR}/framework)
 
 option(ENABLE_PROGRAMS "Build Mbed TLS programs." OFF)
 
@@ -334,14 +334,14 @@ if(CMAKE_BUILD_TYPE STREQUAL "Check" AND TEST_CPP)
     endif()
 endif()
 
-if (NOT EXISTS "${MBEDTLS_FRAMEWORK_DIR}/CMakeLists.txt")
-    if (EXISTS "${MBEDTLS_DIR}/.git")
-        message(FATAL_ERROR "${MBEDTLS_FRAMEWORK_DIR}/CMakeLists.txt not found (and does appear to be a git checkout). Run `git submodule update --init` from the source tree to fetch the submodule contents.")
-    else ()
-        message(FATAL_ERROR "${MBEDTLS_FRAMEWORK_DIR}/CMakeLists.txt not found (and does not appear to be a git checkout). Please ensure you have downloaded the right archive from the release page on GitHub.")
-    endif()
-endif()
-add_subdirectory(framework)
+# if (NOT EXISTS "${MBEDTLS_FRAMEWORK_DIR}/CMakeLists.txt")
+#     if (EXISTS "${MBEDTLS_DIR}/.git")
+#         message(FATAL_ERROR "${MBEDTLS_FRAMEWORK_DIR}/CMakeLists.txt not found (and does appear to be a git checkout). Run `git submodule update --init` from the source tree to fetch the submodule contents.")
+#     else ()
+#         message(FATAL_ERROR "${MBEDTLS_FRAMEWORK_DIR}/CMakeLists.txt not found (and does not appear to be a git checkout). Please ensure you have downloaded the right archive from the release page on GitHub.")
+#     endif()
+# endif()
+# add_subdirectory(framework)
 
 add_subdirectory(include)
 
@@ -391,79 +391,79 @@ add_subdirectory(pkgconfig)
 # target. This library of objects is used by tests and programs CMake files
 # to define the test executables.
 #
-if(ENABLE_TESTING OR ENABLE_PROGRAMS)
-    file(GLOB MBEDTLS_TEST_FILES
-         ${MBEDTLS_FRAMEWORK_DIR}/tests/src/*.c
-         ${MBEDTLS_FRAMEWORK_DIR}/tests/src/drivers/*.c)
-    add_library(mbedtls_test OBJECT ${MBEDTLS_TEST_FILES})
-    set_base_compile_options(mbedtls_test)
-    if(GEN_FILES)
-        add_custom_command(
-            OUTPUT
-                ${CMAKE_CURRENT_BINARY_DIR}/tests/include/test/test_keys.h
-            COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/tests/include/test
-            COMMAND
-                "${MBEDTLS_PYTHON_EXECUTABLE}"
-                "${MBEDTLS_FRAMEWORK_DIR}/scripts/generate_test_keys.py"
-                "--output"
-                "${CMAKE_CURRENT_BINARY_DIR}/tests/include/test/test_keys.h"
-            DEPENDS
-                ${MBEDTLS_FRAMEWORK_DIR}/scripts/generate_test_keys.py
-        )
-        add_custom_target(mbedtls_test_keys_header
-            DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/tests/include/test/test_keys.h)
-        add_dependencies(mbedtls_test mbedtls_test_keys_header)
-    endif()
-    target_include_directories(mbedtls_test
-        PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/tests/include
-        PRIVATE ${MBEDTLS_FRAMEWORK_DIR}/tests/include
-        PRIVATE tests/include
-        PRIVATE include
-        PRIVATE tf-psa-crypto/include
-        PRIVATE tf-psa-crypto/drivers/builtin/include
-        PRIVATE tf-psa-crypto/drivers/everest/include
-        PRIVATE library
-        PRIVATE tf-psa-crypto/core
-        PRIVATE tf-psa-crypto/drivers/builtin/src)
-    # Request C11, needed for memory poisoning tests
-    set_target_properties(mbedtls_test PROPERTIES C_STANDARD 11)
-    set_config_files_compile_definitions(mbedtls_test)
+# if(ENABLE_TESTING OR ENABLE_PROGRAMS)
+#     file(GLOB MBEDTLS_TEST_FILES
+#         #  ${MBEDTLS_FRAMEWORK_DIR}/tests/src/*.c
+#         #  ${MBEDTLS_FRAMEWORK_DIR}/tests/src/drivers/*.c)
+#     add_library(mbedtls_test OBJECT ${MBEDTLS_TEST_FILES})
+#     set_base_compile_options(mbedtls_test)
+#     if(GEN_FILES)
+#         add_custom_command(
+#             OUTPUT
+#                 ${CMAKE_CURRENT_BINARY_DIR}/tests/include/test/test_keys.h
+#             COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/tests/include/test
+#             COMMAND
+#                 "${MBEDTLS_PYTHON_EXECUTABLE}"
+#                 "${MBEDTLS_FRAMEWORK_DIR}/scripts/generate_test_keys.py"
+#                 "--output"
+#                 "${CMAKE_CURRENT_BINARY_DIR}/tests/include/test/test_keys.h"
+#             DEPENDS
+#                 ${MBEDTLS_FRAMEWORK_DIR}/scripts/generate_test_keys.py
+#         )
+#         add_custom_target(mbedtls_test_keys_header
+#             DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/tests/include/test/test_keys.h)
+#         add_dependencies(mbedtls_test mbedtls_test_keys_header)
+#     endif()
+#     target_include_directories(mbedtls_test
+#         PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/tests/include
+#         PRIVATE ${MBEDTLS_FRAMEWORK_DIR}/tests/include
+#         PRIVATE tests/include
+#         PRIVATE include
+#         PRIVATE tf-psa-crypto/include
+#         PRIVATE tf-psa-crypto/drivers/builtin/include
+#         PRIVATE tf-psa-crypto/drivers/everest/include
+#         PRIVATE library
+#         PRIVATE tf-psa-crypto/core
+#         PRIVATE tf-psa-crypto/drivers/builtin/src)
+#     # Request C11, needed for memory poisoning tests
+#     set_target_properties(mbedtls_test PROPERTIES C_STANDARD 11)
+#     set_config_files_compile_definitions(mbedtls_test)
 
-    file(GLOB MBEDTLS_TEST_HELPER_FILES
-         tests/src/*.c tests/src/test_helpers/*.c)
-    add_library(mbedtls_test_helpers OBJECT ${MBEDTLS_TEST_HELPER_FILES})
-    set_base_compile_options(mbedtls_test_helpers)
-    if(GEN_FILES)
-        add_custom_command(
-            OUTPUT
-                ${CMAKE_CURRENT_BINARY_DIR}/tests/include/test/test_certs.h
-            COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/tests/include/test
-            COMMAND
-                "${MBEDTLS_PYTHON_EXECUTABLE}"
-                "${MBEDTLS_FRAMEWORK_DIR}/scripts/generate_test_cert_macros.py"
-                "--output"
-                "${CMAKE_CURRENT_BINARY_DIR}/tests/include/test/test_certs.h"
-            DEPENDS
-                ${MBEDTLS_FRAMEWORK_DIR}/scripts/generate_test_cert_macros.py
-        )
-        add_custom_target(mbedtls_test_certs_header
-            DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/tests/include/test/test_certs.h)
-        add_dependencies(mbedtls_test_helpers mbedtls_test_certs_header)
-    endif()
-    target_include_directories(mbedtls_test_helpers
-        PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/tests/include
-        PRIVATE ${MBEDTLS_FRAMEWORK_DIR}/tests/include
-        PRIVATE tests/include
-        PRIVATE include
-        PRIVATE tf-psa-crypto/include
-        PRIVATE tf-psa-crypto/drivers/builtin/include
-        PRIVATE library
-        PRIVATE tf-psa-crypto/core
-        PRIVATE tf-psa-crypto/drivers/builtin/src
-        PRIVATE tf-psa-crypto/drivers/everest/include)
+#     file(GLOB MBEDTLS_TEST_HELPER_FILES
+#          tests/src/*.c tests/src/test_helpers/*.c)
+#     add_library(mbedtls_test_helpers OBJECT ${MBEDTLS_TEST_HELPER_FILES})
+#     set_base_compile_options(mbedtls_test_helpers)
+#     if(GEN_FILES)
+#         add_custom_command(
+#             OUTPUT
+#                 ${CMAKE_CURRENT_BINARY_DIR}/tests/include/test/test_certs.h
+#             COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/tests/include/test
+#             COMMAND
+#                 "${MBEDTLS_PYTHON_EXECUTABLE}"
+#                 "${MBEDTLS_FRAMEWORK_DIR}/scripts/generate_test_cert_macros.py"
+#                 "--output"
+#                 "${CMAKE_CURRENT_BINARY_DIR}/tests/include/test/test_certs.h"
+#             DEPENDS
+#                 ${MBEDTLS_FRAMEWORK_DIR}/scripts/generate_test_cert_macros.py
+#         )
+#         add_custom_target(mbedtls_test_certs_header
+#             DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/tests/include/test/test_certs.h)
+#         add_dependencies(mbedtls_test_helpers mbedtls_test_certs_header)
+#     endif()
+#     target_include_directories(mbedtls_test_helpers
+#         PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/tests/include
+#         PRIVATE ${MBEDTLS_FRAMEWORK_DIR}/tests/include
+#         PRIVATE tests/include
+#         PRIVATE include
+#         PRIVATE tf-psa-crypto/include
+#         PRIVATE tf-psa-crypto/drivers/builtin/include
+#         PRIVATE library
+#         PRIVATE tf-psa-crypto/core
+#         PRIVATE tf-psa-crypto/drivers/builtin/src
+#         PRIVATE tf-psa-crypto/drivers/everest/include)
 
-    set_config_files_compile_definitions(mbedtls_test_helpers)
-endif()
+#     set_config_files_compile_definitions(mbedtls_test_helpers)
+# endif()
 
 if(ENABLE_PROGRAMS)
     set(ssl_opt_target "${MBEDTLS_TARGET_PREFIX}ssl-opt")

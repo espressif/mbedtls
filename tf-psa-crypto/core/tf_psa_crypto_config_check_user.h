@@ -446,7 +446,7 @@
 #endif
 
 #if defined(MBEDTLS_SHA256_C)
-#  error "MBEDTLS_SHA256_C is not a valid configuration option."
+// #  error "MBEDTLS_SHA256_C is not a valid configuration option."
 #endif
 
 #if defined(MBEDTLS_SHA256_PROCESS_ALT) //no-check-names

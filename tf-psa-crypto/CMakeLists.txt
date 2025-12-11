@@ -80,7 +80,7 @@ ADD_CUSTOM_TARGET(${TF_PSA_CRYPTO_TARGET_PREFIX}tfpsacrypto-apidoc
     COMMAND doxygen tfpsacrypto.doxyfile
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/doxygen)
 
-option(ENABLE_PROGRAMS "Build TF-PSA-Crypto programs." OFF)
+option(ENABLE_PROGRAMS "Build TF-PSA-Crypto programs." ON)
 
 option(TF_PSA_CRYPTO_FATAL_WARNINGS "Compiler warnings treated as errors" ON)
 if(CMAKE_HOST_WIN32)
@@ -369,50 +369,50 @@ add_subdirectory(pkgconfig)
 # objects target. This library of objects is used by tests and programs CMake
 # files to define the test executables.
 #
-# if(ENABLE_TESTING OR ENABLE_PROGRAMS)
-#     file(GLOB TF_PSA_CRYPTO_TEST_FILES
-#          ${TF_PSA_CRYPTO_FRAMEWORK_DIR}/tests/src/*.c
-#          ${TF_PSA_CRYPTO_FRAMEWORK_DIR}/tests/src/drivers/*.c
-#          tests/src/*.c)
-#     add_library(tf_psa_crypto_test OBJECT ${TF_PSA_CRYPTO_TEST_FILES})
-#     tf_psa_crypto_set_base_compile_options(tf_psa_crypto_test)
-#     if(GEN_FILES)
-#         add_custom_command(
-#             OUTPUT
-#                 ${CMAKE_CURRENT_BINARY_DIR}/tests/include/test/test_keys.h
-#             COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/tests/include/test
-#             COMMAND
-#                 "${TF_PSA_CRYPTO_PYTHON_EXECUTABLE}"
-#                 "${TF_PSA_CRYPTO_FRAMEWORK_DIR}/scripts/generate_test_keys.py"
-#                 "--output"
-#                 "${CMAKE_CURRENT_BINARY_DIR}/tests/include/test/test_keys.h"
-#             DEPENDS
-#                 ${TF_PSA_CRYPTO_FRAMEWORK_DIR}/scripts/generate_test_keys.py
-#         )
-#         add_custom_target(tf_psa_crypto_test_keys_header
-#             DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/tests/include/test/test_keys.h)
-#         add_dependencies(tf_psa_crypto_test tf_psa_crypto_test_keys_header)
-#     endif()
+if(ENABLE_TESTING OR ENABLE_PROGRAMS)
+    file(GLOB TF_PSA_CRYPTO_TEST_FILES
+         ${TF_PSA_CRYPTO_FRAMEWORK_DIR}/tests/src/*.c
+         ${TF_PSA_CRYPTO_FRAMEWORK_DIR}/tests/src/drivers/*.c
+         tests/src/*.c)
+    add_library(tf_psa_crypto_test OBJECT ${TF_PSA_CRYPTO_TEST_FILES})
+    tf_psa_crypto_set_base_compile_options(tf_psa_crypto_test)
+    if(GEN_FILES)
+        add_custom_command(
+            OUTPUT
+                ${CMAKE_CURRENT_BINARY_DIR}/tests/include/test/test_keys.h
+            COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/tests/include/test
+            COMMAND
+                "${TF_PSA_CRYPTO_PYTHON_EXECUTABLE}"
+                "${TF_PSA_CRYPTO_FRAMEWORK_DIR}/scripts/generate_test_keys.py"
+                "--output"
+                "${CMAKE_CURRENT_BINARY_DIR}/tests/include/test/test_keys.h"
+            DEPENDS
+                ${TF_PSA_CRYPTO_FRAMEWORK_DIR}/scripts/generate_test_keys.py
+        )
+        add_custom_target(tf_psa_crypto_test_keys_header
+            DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/tests/include/test/test_keys.h)
+        add_dependencies(tf_psa_crypto_test tf_psa_crypto_test_keys_header)
+    endif()
 
-#     file(WRITE
-#         ${CMAKE_CURRENT_BINARY_DIR}/tests/seedfile
-#         "This is a seedfile that contains 64 bytes ......................"
-#     )
+    file(WRITE
+        ${CMAKE_CURRENT_BINARY_DIR}/tests/seedfile
+        "This is a seedfile that contains 64 bytes ......................"
+    )
 
-#     target_include_directories(tf_psa_crypto_test
-#         PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/tests/include
-#         PRIVATE ${TF_PSA_CRYPTO_FRAMEWORK_DIR}/tests/include
-#         PRIVATE tests/include
-#         PRIVATE tests/include/test
-#         PRIVATE include
-#         PRIVATE drivers/builtin/include
-#         PRIVATE drivers/everest/include
-#         PRIVATE core
-#         PRIVATE drivers/builtin/src)
-#     # Request C11, needed for memory poisoning tests
-#     set_target_properties(tf_psa_crypto_test PROPERTIES C_STANDARD 11)
-#     tf_psa_crypto_set_config_files_compile_definitions(tf_psa_crypto_test)
-# endif()
+    target_include_directories(tf_psa_crypto_test
+        PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/tests/include
+        PRIVATE ${TF_PSA_CRYPTO_FRAMEWORK_DIR}/tests/include
+        PRIVATE tests/include
+        PRIVATE tests/include/test
+        PRIVATE include
+        PRIVATE drivers/builtin/include
+        PRIVATE drivers/everest/include
+        PRIVATE core
+        PRIVATE drivers/builtin/src)
+    # Request C11, needed for memory poisoning tests
+    set_target_properties(tf_psa_crypto_test PROPERTIES C_STANDARD 11)
+    tf_psa_crypto_set_config_files_compile_definitions(tf_psa_crypto_test)
+endif()
 
 if(ENABLE_PROGRAMS)
     add_subdirectory(programs)

@@ -1267,30 +1267,28 @@ cleanup:
 
 #if !defined(MBEDTLS_RSA_NO_CRT)
 /*
- * Compute T such that T = TP mod P and T = TP mod Q.
+ * Compute T such that T = TP mod P and T = TQ mod Q.
  * (This is the Chinese Remainder Theorem - CRT.)
- *
- * WARNING: uses TP as a temporary, so its value is lost!
  */
 static int rsa_apply_crt(mbedtls_mpi *T,
-                         mbedtls_mpi *TP,
+                         const mbedtls_mpi *TP,
                          const mbedtls_mpi *TQ,
                          const mbedtls_rsa_context *ctx)
 {
     int ret;
 
     /*
-     * T = (TP - TQ) * (Q^-1 mod P) mod P
+     * Set T = ((TP - TQ) * (Q^-1 mod P) mod P) * Q + TQ
+     *
+     * That way we have both:
+     * mod P: T = (TP - TQ) * (Q^-1 * Q) + TQ = (TP - TQ) * 1 + TQ = TP
+     * mod Q: T = (...) * Q + TQ = TQ
      */
-    MBEDTLS_MPI_CHK(mbedtls_mpi_sub_mpi(T, TP, TQ));
-    MBEDTLS_MPI_CHK(mbedtls_mpi_mul_mpi(TP, T, &ctx->QP));
-    MBEDTLS_MPI_CHK(mbedtls_mpi_mod_mpi(T, TP, &ctx->P));
-
-    /*
-     * T = TQ + T * Q
-     */
-    MBEDTLS_MPI_CHK(mbedtls_mpi_mul_mpi(TP, T, &ctx->Q));
-    MBEDTLS_MPI_CHK(mbedtls_mpi_add_mpi(T, TQ, TP));
+    MBEDTLS_MPI_CHK(mbedtls_mpi_sub_mpi(T, TP, TQ));        // T = TP - TQ
+    MBEDTLS_MPI_CHK(mbedtls_mpi_mul_mpi(T, T, &ctx->QP));   // T *= Q^-1 mod P
+    MBEDTLS_MPI_CHK(mbedtls_mpi_mod_mpi(T, T, &ctx->P));    // T %= P
+    MBEDTLS_MPI_CHK(mbedtls_mpi_mul_mpi(T, T, &ctx->Q));    // T *= Q
+    MBEDTLS_MPI_CHK(mbedtls_mpi_add_mpi(T, T, TQ));         // T += TQ
 
 cleanup:
     return ret;
@@ -1315,7 +1313,8 @@ static int rsa_gen_rand_with_inverse(const mbedtls_rsa_context *ctx,
 
     if (mbedtls_mpi_cmp_int(&G, 1) != 0) {
         /* This happens if we're unlucky enough to draw a multiple of P or Q,
-         * or if one of them is not a prime and G is one of its factors. */
+         * or if (at least) one of them is not a prime, and we drew a multiple
+         * of one of its factors. */
         ret = MBEDTLS_ERR_RSA_RNG_FAILED;
         goto cleanup;
     }
@@ -1332,6 +1331,20 @@ cleanup:
     mbedtls_mpi_init(&Bp); mbedtls_mpi_init(&Bq);
     mbedtls_mpi_init(&G);
 
+    /*
+     * Instead of generating A, B = A^-1 (mod N) directly, generate one Ap, Bp
+     * pair (mod P) and one pair (mod Q) and use Chinese Remainder Theorem to
+     * construct an A and B from those.
+     *
+     * This works because the CRT correspondence is a ring isomorphism between
+     * Z/NZ (integers mod N) and Z/PZ x Z/QZ (pairs of integers mod P and Q):
+     * - it is a bijection (one-to-one correspondence);
+     * - doing a ring operation (modular +, -, *, ^-1 when possible) on one side is
+     *   the same as doing it on the other side.
+     * So, drawing uniformly at random an invertible A mod N is the same as
+     * drawing uniformly at random pairs of invertible Ap mod P, Aq mod Q.
+     */
+
     /* Generate Ap in [1, P) and compute Bp = Ap^-1 mod P */
     MBEDTLS_MPI_CHK(mbedtls_mpi_random(&Ap, 1, &ctx->P, f_rng, p_rng));
     MBEDTLS_MPI_CHK(mbedtls_mpi_gcd_modinv_odd(&G, &Bp, &Ap, &ctx->P));
@@ -1341,7 +1354,7 @@ cleanup:
         goto cleanup;
     }
 
-    /* Generate Ap in [1, Q) and compute Bq = Aq^-1 mod P */
+    /* Generate Aq in [1, Q) and compute Bq = Aq^-1 mod Q */
     MBEDTLS_MPI_CHK(mbedtls_mpi_random(&Aq, 1, &ctx->Q, f_rng, p_rng));
     MBEDTLS_MPI_CHK(mbedtls_mpi_gcd_modinv_odd(&G, &Bq, &Aq, &ctx->Q));
     if (mbedtls_mpi_cmp_int(&G, 1) != 0) {

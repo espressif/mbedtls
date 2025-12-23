@@ -7,6 +7,8 @@ if(CMAKE_COMPILER_IS_GNUCC)
 endif(CMAKE_COMPILER_IS_GNUCC)
 
 if(CMAKE_COMPILER_IS_CLANG)
+    # Espressif: Removed -Wdocumentation as it creates lots of noise
+    # from FreeRTOS header files
     set(LIBS_C_FLAGS -Wmissing-declarations -Wmissing-prototypes -Wno-documentation-deprecated-sync -Wunreachable-code)
 endif(CMAKE_COMPILER_IS_CLANG)
 

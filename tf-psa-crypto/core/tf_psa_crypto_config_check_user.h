@@ -446,6 +446,8 @@
 #endif
 
 #if defined(MBEDTLS_SHA256_C)
+// Skipped check for MBEDTLS_SHA256_C to allow its use in TF-PSA_Crypto
+// We need it to enable SHA-256 software implementation with espcoredump
 // #  error "MBEDTLS_SHA256_C is not a valid configuration option."
 #endif
 

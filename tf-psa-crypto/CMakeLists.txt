@@ -67,7 +67,7 @@ endif()
 # Set the project, Mbed TLS and framework root directory.
 set(TF_PSA_CRYPTO_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(MBEDTLS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/..)
-# set(TF_PSA_CRYPTO_FRAMEWORK_DIR ${CMAKE_CURRENT_SOURCE_DIR}/framework)
+set(TF_PSA_CRYPTO_FRAMEWORK_DIR ${CMAKE_CURRENT_SOURCE_DIR}/framework)
 
 # Put the version numbers into relevant files
 set(version_number_files
@@ -112,7 +112,7 @@ string(REGEX MATCH "MSVC" CMAKE_COMPILER_IS_MSVC "${COMPILER_ID}")
 if(CMAKE_COMPILER_IS_MSVC)
     option(ENABLE_TESTING "Build TF-PSA-Crypto tests." OFF)
 else()
-    option(ENABLE_TESTING "Build TF-PSA-Crypto tests." OFF)
+    option(ENABLE_TESTING "Build TF-PSA-Crypto tests." ON)
 endif()
 
 option(USE_STATIC_TF_PSA_CRYPTO_LIBRARY "Build TF-PSA-Crypto static library." ON)
@@ -209,6 +209,8 @@ endfunction(tf_psa_crypto_get_name_without_last_ext)
 include(CheckCCompilerFlag)
 
 set(CMAKE_C_EXTENSIONS OFF)
+# Espressif: We set C standard in ESP-IDF build system
+# No need to set it here
 # set(CMAKE_C_STANDARD 99)
 
 function(tf_psa_crypto_set_base_compile_options target)
@@ -347,6 +349,7 @@ if(CMAKE_BUILD_TYPE STREQUAL "Check" AND TEST_CPP)
     endif()
 endif()
 
+# Espressif: We do not use framework submodule to build TF-PSA-Crypto
 # if (NOT EXISTS "${TF_PSA_CRYPTO_FRAMEWORK_DIR}/CMakeLists.txt")
 #     message(FATAL_ERROR "${TF_PSA_CRYPTO_FRAMEWORK_DIR}/CMakeLists.txt not found. Run `git submodule update --init` from the source tree to fetch the submodule contents.")
 # endif()

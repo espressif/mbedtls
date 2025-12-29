@@ -51,6 +51,11 @@
 #include "../../../port/psa_driver/include/psa_crypto_driver_esp_aes_gcm.h"
 
 #endif
+/* Headers for esp_ecdsa opaque driver */
+#if defined(ESP_ECDSA_DRIVER_ENABLED)
+#include "../../../port/psa_driver/include/psa_crypto_driver_esp_ecdsa.h"
+
+#endif
 
 /* END-driver headers */
 
@@ -194,8 +199,22 @@ psa_status_t psa_driver_wrapper_export_public_key(
                             data_length
         ));
 #endif
-
-
+#if defined(ESP_ECDSA_DRIVER_ENABLED) && defined(ESP_ECDSA_SIGN_DRIVER_ENABLED)
+        case PSA_KEY_LOCATION_ESP_ECDSA:
+            if( PSA_KEY_TYPE_IS_ECC( psa_get_key_type(attributes) ) &&
+                PSA_ALG_IS_ECDSA( psa_get_key_algorithm(attributes) ) &&
+                PSA_KEY_TYPE_ECC_GET_FAMILY(psa_get_key_type(attributes)) == PSA_ECC_FAMILY_SECP_R1)
+            {
+                return (    esp_ecdsa_opaque_export_public_key(
+                            attributes,
+                            key_buffer,
+                            key_buffer_size,
+                            data,
+                            data_size,
+                            data_length ) );
+            }
+            return PSA_ERROR_INVALID_ARGUMENT;
+#endif /* defined(ESP_ECDSA_DRIVER_ENABLED) && defined(ESP_ECDSA_SIGN_DRIVER_ENABLED) */
 #endif /* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */
         default:
             /* Key is declared with a lifetime not known to us */

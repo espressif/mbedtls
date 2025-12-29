@@ -57,6 +57,11 @@
 #include "../../../port/psa_driver/include/psa_crypto_driver_esp_md5.h"
 #endif
 
+/* Headers for esp_ecdsa opaque driver */
+#if defined(ESP_ECDSA_DRIVER_ENABLED)
+#include "../../../port/psa_driver/include/psa_crypto_driver_esp_ecdsa.h"
+
+#endif
 /* END-driver headers */
 
 /* Auto-generated values depending on which drivers are registered.
@@ -70,6 +75,8 @@
 #define ESP_SHA_TRANSPARENT_DRIVER_ID (5)
 #define ESP_AES_TRANSPARENT_DRIVER_ID (6)
 #define ESP_MD5_TRANSPARENT_DRIVER_ID (7)
+#define ESP_ECDSA_TRANSPARENT_DRIVER_ID (8)
+#define ESP_ECDSA_OPAQUE_DRIVER_ID (9)
 
 /* END-driver id */
 
@@ -325,6 +332,24 @@ static inline psa_status_t psa_driver_wrapper_sign_hash(
                                                              signature_size,
                                                              signature_length ) );
 #endif /* PSA_CRYPTO_DRIVER_TEST */
+#if defined(ESP_ECDSA_DRIVER_ENABLED) && defined(ESP_ECDSA_SIGN_DRIVER_ENABLED)
+        case PSA_KEY_LOCATION_ESP_ECDSA:
+            if( PSA_KEY_TYPE_IS_ECC( psa_get_key_type(attributes) ) &&
+                PSA_ALG_IS_ECDSA(alg) && PSA_ALG_IS_ECDSA( psa_get_key_algorithm(attributes) ) &&
+                PSA_KEY_TYPE_ECC_GET_FAMILY(psa_get_key_type(attributes)) == PSA_ECC_FAMILY_SECP_R1)
+            {
+                return ( esp_ecdsa_opaque_sign_hash( attributes,
+                                                key_buffer,
+                                                key_buffer_size,
+                                                alg,
+                                                hash,
+                                                hash_length,
+                                                signature,
+                                                signature_size,
+                                                signature_length ) );
+            }
+            return PSA_ERROR_INVALID_ARGUMENT;
+#endif /* defined(ESP_ECDSA_DRIVER_ENABLED) && defined(ESP_ECDSA_SIGN_DRIVER_ENABLED) */
 #endif /* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */
         default:
             /* Key is declared with a lifetime not known to us */
@@ -349,6 +374,24 @@ static inline psa_status_t psa_driver_wrapper_verify_hash(
             /* Key is stored in the slot in export representation, so
              * cycle through all known transparent accelerators */
 #if defined(PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT)
+#if defined(ESP_ECDSA_DRIVER_ENABLED) && defined(ESP_ECDSA_VERIFY_DRIVER_ENABLED)
+            if( PSA_KEY_TYPE_IS_ECC( psa_get_key_type(attributes) ) &&
+                PSA_ALG_IS_ECDSA(alg) && PSA_ALG_IS_ECDSA( psa_get_key_algorithm(attributes) ) &&
+                PSA_KEY_TYPE_ECC_GET_FAMILY(psa_get_key_type(attributes)) == PSA_ECC_FAMILY_SECP_R1)
+            {
+                status = esp_ecdsa_transparent_verify_hash( attributes,
+                                                            key_buffer,
+                                                            key_buffer_size,
+                                                            alg,
+                                                            hash,
+                                                            hash_length,
+                                                            signature,
+                                                            signature_length );
+
+                if ( status != PSA_ERROR_NOT_SUPPORTED )
+                    return( status );
+            }
+#endif /* defined(ESP_ECDSA_DRIVER_ENABLED) && defined(ESP_ECDSA_VERIFY_DRIVER_ENABLED) */
 #if defined(PSA_CRYPTO_DRIVER_TEST)
             status = mbedtls_test_transparent_signature_verify_hash(
                          attributes,
@@ -405,6 +448,24 @@ static inline psa_status_t psa_driver_wrapper_verify_hash(
                                                                signature,
                                                                signature_length ) );
 #endif /* PSA_CRYPTO_DRIVER_TEST */
+#if defined(ESP_ECDSA_DRIVER_ENABLED) && defined(ESP_ECDSA_VERIFY_DRIVER_ENABLED)
+        case PSA_KEY_LOCATION_ESP_ECDSA:
+            if( PSA_KEY_TYPE_IS_ECC( psa_get_key_type(attributes) ) &&
+                PSA_ALG_IS_ECDSA(alg) && PSA_ALG_IS_ECDSA( psa_get_key_algorithm(attributes) ) &&
+                PSA_KEY_TYPE_ECC_GET_FAMILY(psa_get_key_type(attributes)) == PSA_ECC_FAMILY_SECP_R1)
+            {
+                return esp_ecdsa_transparent_verify_hash( attributes,
+                                                        key_buffer,
+                                                        key_buffer_size,
+                                                        alg,
+                                                        hash,
+                                                        hash_length,
+                                                        signature,
+                                                        signature_length );
+            }
+            return PSA_ERROR_INVALID_ARGUMENT;
+#endif /* defined(ESP_ECDSA_DRIVER_ENABLED) && defined(ESP_ECDSA_VERIFY_DRIVER_ENABLED) */
+
 #endif /* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */
         default:
             /* Key is declared with a lifetime not known to us */
@@ -497,7 +558,24 @@ static inline psa_status_t psa_driver_wrapper_sign_hash_start(
             break;
 
             /* Add cases for opaque driver here */
-
+#if defined(ESP_ECDSA_DRIVER_ENABLED) && defined(ESP_ECDSA_SIGN_DRIVER_ENABLED)
+        case PSA_KEY_LOCATION_ESP_ECDSA:
+            if( PSA_KEY_TYPE_IS_ECC( psa_get_key_type(attributes) ) &&
+                PSA_ALG_IS_ECDSA(alg) && PSA_ALG_IS_ECDSA( psa_get_key_algorithm(attributes) ) &&
+                PSA_KEY_TYPE_ECC_GET_FAMILY(psa_get_key_type(attributes)) == PSA_ECC_FAMILY_SECP_R1)
+            {
+                status = esp_ecdsa_opaque_sign_hash_start( &operation->ctx.esp_ecdsa_opaque_sign_hash_ctx,
+                                                            attributes,
+                                                            key_buffer, key_buffer_size,
+                                                            alg, hash, hash_length );
+                if (status == PSA_SUCCESS) {
+                    operation->id = ESP_ECDSA_OPAQUE_DRIVER_ID;
+                }
+                return status;
+            } else {
+                return PSA_ERROR_INVALID_ARGUMENT;
+            }
+#endif /* defined(ESP_ECDSA_DRIVER_ENABLED) && defined(ESP_ECDSA_SIGN_DRIVER_ENABLED) */
         default:
             /* Key is declared with a lifetime not known to us */
             status = PSA_ERROR_INVALID_ARGUMENT;
@@ -524,6 +602,12 @@ static inline psa_status_t psa_driver_wrapper_sign_hash_complete(
             /* Add test driver tests here */
 
 #endif /* PSA_CRYPTO_DRIVER_TEST */
+#if defined(ESP_ECDSA_DRIVER_ENABLED) && defined(ESP_ECDSA_SIGN_DRIVER_ENABLED)
+        case ESP_ECDSA_OPAQUE_DRIVER_ID:
+            return esp_ecdsa_opaque_sign_hash_complete( &operation->ctx.esp_ecdsa_opaque_sign_hash_ctx,
+                                                        signature, signature_size,
+                                                        signature_length );
+#endif /* defined(ESP_ECDSA_DRIVER_ENABLED) && defined(ESP_ECDSA_SIGN_DRIVER_ENABLED) */
 #endif /* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */
     }
 
@@ -547,6 +631,10 @@ static inline psa_status_t psa_driver_wrapper_sign_hash_abort(
             /* Add test driver tests here */
 
 #endif /* PSA_CRYPTO_DRIVER_TEST */
+#if defined(ESP_ECDSA_DRIVER_ENABLED) && defined(ESP_ECDSA_SIGN_DRIVER_ENABLED)
+        case ESP_ECDSA_OPAQUE_DRIVER_ID:
+            return esp_ecdsa_opaque_sign_hash_abort( &operation->ctx.esp_ecdsa_opaque_sign_hash_ctx );
+#endif /* defined(ESP_ECDSA_DRIVER_ENABLED) && defined(ESP_ECDSA_SIGN_DRIVER_ENABLED) */
 #endif /* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */
     }
 
@@ -574,6 +662,23 @@ static inline psa_status_t psa_driver_wrapper_verify_hash_start(
 #if defined(PSA_CRYPTO_DRIVER_TEST)
 
             /* Add test driver tests here */
+#if defined(ESP_ECDSA_DRIVER_ENABLED) && defined(ESP_ECDSA_VERIFY_DRIVER_ENABLED)
+            if( PSA_KEY_TYPE_IS_ECC( psa_get_key_type(attributes) ) &&
+                PSA_ALG_IS_ECDSA(alg) && PSA_ALG_IS_ECDSA( psa_get_key_algorithm(attributes) ) &&
+                PSA_KEY_TYPE_ECC_GET_FAMILY(psa_get_key_type(attributes)) == PSA_ECC_FAMILY_SECP_R1)
+            {
+                status = esp_ecdsa_transparent_verify_hash_start( &operation->ctx.esp_ecdsa_transparent_verify_hash_ctx,
+                                                                attributes,
+                                                                key_buffer,
+                                                                key_buffer_size,
+                                                                alg, hash, hash_length, signature, signature_length );
+                if (status == PSA_SUCCESS) {
+                    operation->id = ESP_ECDSA_TRANSPARENT_DRIVER_ID;
+                }
+                if( status != PSA_ERROR_NOT_SUPPORTED )
+                    return( status );
+            }
+#endif /* defined(ESP_ECDSA_DRIVER_ENABLED) && defined(ESP_ECDSA_VERIFY_DRIVER_ENABLED) */
 
             /* Declared with fallback == true */
 
@@ -590,6 +695,27 @@ static inline psa_status_t psa_driver_wrapper_verify_hash_start(
             break;
 
             /* Add cases for opaque driver here */
+
+#if defined(ESP_ECDSA_DRIVER_ENABLED) && defined(ESP_ECDSA_VERIFY_DRIVER_ENABLED)
+        case PSA_KEY_LOCATION_ESP_ECDSA:
+            if( PSA_KEY_TYPE_IS_ECC( psa_get_key_type(attributes) ) &&
+                PSA_ALG_IS_ECDSA(alg) && PSA_ALG_IS_ECDSA( psa_get_key_algorithm(attributes) ) &&
+                PSA_KEY_TYPE_ECC_GET_FAMILY(psa_get_key_type(attributes)) == PSA_ECC_FAMILY_SECP_R1)
+            {
+                status = esp_ecdsa_transparent_verify_hash_start( &operation->ctx.esp_ecdsa_transparent_verify_hash_ctx,
+                                                                attributes,
+                                                                key_buffer,
+                                                                key_buffer_size,
+                                                                alg, hash, hash_length, signature, signature_length );
+                if (status == PSA_SUCCESS) {
+                    operation->id = ESP_ECDSA_TRANSPARENT_DRIVER_ID;
+                }
+                return status;
+            } else {
+                return PSA_ERROR_INVALID_ARGUMENT;
+            }
+
+#endif /* defined(ESP_ECDSA_DRIVER_ENABLED) && defined(ESP_ECDSA_VERIFY_DRIVER_ENABLED) */
 
         default:
             /* Key is declared with a lifetime not known to us */
@@ -615,6 +741,10 @@ static inline psa_status_t psa_driver_wrapper_verify_hash_complete(
             /* Add test driver tests here */
 
 #endif /* PSA_CRYPTO_DRIVER_TEST */
+#if defined(ESP_ECDSA_DRIVER_ENABLED) && defined(ESP_ECDSA_VERIFY_DRIVER_ENABLED)
+        case ESP_ECDSA_TRANSPARENT_DRIVER_ID:
+            return esp_ecdsa_transparent_verify_hash_complete( &operation->ctx.esp_ecdsa_transparent_verify_hash_ctx );
+#endif /* defined(ESP_ECDSA_DRIVER_ENABLED) && defined(ESP_ECDSA_VERIFY_DRIVER_ENABLED) */
 #endif /* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */
     }
 
@@ -635,6 +765,10 @@ static inline psa_status_t psa_driver_wrapper_verify_hash_abort(
             /* Add test driver tests here */
 
 #endif /* PSA_CRYPTO_DRIVER_TEST */
+#if defined(ESP_ECDSA_DRIVER_ENABLED) && defined(ESP_ECDSA_VERIFY_DRIVER_ENABLED)
+        case ESP_ECDSA_TRANSPARENT_DRIVER_ID:
+            return esp_ecdsa_transparent_verify_hash_abort( &operation->ctx.esp_ecdsa_transparent_verify_hash_ctx );
+#endif /* defined(ESP_ECDSA_DRIVER_ENABLED) && defined(ESP_ECDSA_VERIFY_DRIVER_ENABLED) */
 #endif /* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */
     }
 
@@ -673,6 +807,13 @@ static inline psa_status_t psa_driver_wrapper_get_key_buffer_size_from_key_data(
             return( ( *key_buffer_size != 0 ) ?
                     PSA_SUCCESS : PSA_ERROR_NOT_SUPPORTED );
 #endif /* PSA_CRYPTO_DRIVER_TEST */
+#if defined(ESP_ECDSA_DRIVER_ENABLED) && defined(ESP_ECDSA_SIGN_DRIVER_ENABLED)
+        case PSA_KEY_LOCATION_ESP_ECDSA:
+            *key_buffer_size = esp_ecdsa_opaque_size_function( key_type,
+                                     PSA_BYTES_TO_BITS( data_length ) );
+            return( ( *key_buffer_size != 0 ) ?
+                    PSA_SUCCESS : PSA_ERROR_NOT_SUPPORTED );
+#endif /* defined(ESP_ECDSA_DRIVER_ENABLED) && defined(ESP_ECDSA_SIGN_DRIVER_ENABLED) */
 
         default:
             (void)key_type;
@@ -844,6 +985,14 @@ static inline psa_status_t psa_driver_wrapper_import_key(
         ));
 #endif
 
+#if defined(ESP_ECDSA_DRIVER_ENABLED) && defined(ESP_ECDSA_SIGN_DRIVER_ENABLED)
+        case PSA_KEY_LOCATION_ESP_ECDSA:
+            return( esp_ecdsa_opaque_import_key(
+                        attributes,
+                        data, data_length,
+                        key_buffer, key_buffer_size,
+                        key_buffer_length, bits ) );
+#endif /* defined(ESP_ECDSA_DRIVER_ENABLED) && defined(ESP_ECDSA_SIGN_DRIVER_ENABLED) */
 
 #endif /* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */
         default:

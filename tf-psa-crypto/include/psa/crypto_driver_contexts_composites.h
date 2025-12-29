@@ -32,6 +32,15 @@
 /* Include the context structure definitions for those drivers that were
  * declared during the autogeneration process. */
 
+
+ #if defined(ESP_AES_DRIVER_ENABLED)
+ #include "psa_crypto_driver_esp_aes_contexts.h"
+ #endif
+
+#if defined(ESP_ECDSA_DRIVER_ENABLED)
+#include "psa_crypto_driver_esp_ecdsa_contexts.h"
+#endif
+
 #if defined(MBEDTLS_TEST_LIBTESTDRIVER1)
 #include <libtestdriver1/tf-psa-crypto/include/psa/crypto.h>
 #endif
@@ -136,11 +145,17 @@ typedef union {
 typedef union {
     unsigned dummy; /* Make sure this union is always non-empty */
     mbedtls_psa_sign_hash_interruptible_operation_t mbedtls_ctx;
+#if defined(ESP_ECDSA_DRIVER_ENABLED) && defined(ESP_ECDSA_SIGN_DRIVER_ENABLED)
+    esp_ecdsa_opaque_sign_hash_operation_t esp_ecdsa_opaque_sign_hash_ctx;
+#endif
 } psa_driver_sign_hash_interruptible_context_t;
 
 typedef union {
     unsigned dummy; /* Make sure this union is always non-empty */
     mbedtls_psa_verify_hash_interruptible_operation_t mbedtls_ctx;
+#if defined(ESP_ECDSA_DRIVER_ENABLED) && defined(ESP_ECDSA_VERIFY_DRIVER_ENABLED)
+    esp_ecdsa_transparent_verify_hash_operation_t esp_ecdsa_transparent_verify_hash_ctx;
+#endif
 } psa_driver_verify_hash_interruptible_context_t;
 
 typedef union {

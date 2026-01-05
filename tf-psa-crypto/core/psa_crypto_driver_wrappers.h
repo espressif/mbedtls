@@ -53,6 +53,10 @@
 
 #endif
 
+#if defined(ESP_MD5_DRIVER_ENABLED)
+#include "../../../port/psa_driver/include/psa_crypto_driver_esp_md5.h"
+#endif
+
 /* END-driver headers */
 
 /* Auto-generated values depending on which drivers are registered.
@@ -65,6 +69,7 @@
 #define P256_TRANSPARENT_DRIVER_ID (4)
 #define ESP_SHA_TRANSPARENT_DRIVER_ID (5)
 #define ESP_AES_TRANSPARENT_DRIVER_ID (6)
+#define ESP_MD5_TRANSPARENT_DRIVER_ID (7)
 
 /* END-driver id */
 
@@ -1521,6 +1526,13 @@ static inline psa_status_t psa_driver_wrapper_hash_compute(
         return( status );
 #endif /* ESP_SHA_DRIVER_ENABLED */
 
+#if defined(ESP_MD5_DRIVER_ENABLED)
+    status = esp_md5_hash_compute(alg, input, input_length, 
+                                     hash, hash_size, hash_length );
+    if( status != PSA_ERROR_NOT_SUPPORTED )
+        return( status );
+#endif /* ESP_MD5_DRIVER_ENABLED */
+
 #endif /* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */
 
     /* If software fallback is compiled in, try fallback */
@@ -1567,6 +1579,14 @@ static inline psa_status_t psa_driver_wrapper_hash_setup(
         return( status );
 #endif /* ESP_SHA_DRIVER_ENABLED */
 
+#if defined(ESP_MD5_DRIVER_ENABLED)
+    status = esp_md5_hash_setup(&operation->ctx.md5_ctx, alg);
+    if( status == PSA_SUCCESS )
+        operation->id = ESP_MD5_TRANSPARENT_DRIVER_ID;
+    if( status != PSA_ERROR_NOT_SUPPORTED )
+        return( status );
+#endif /* ESP_MD5_DRIVER_ENABLED */
+
 #endif /* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */
 
     /* If software fallback is compiled in, try fallback */
@@ -1605,6 +1625,13 @@ static inline psa_status_t psa_driver_wrapper_hash_clone(
                         &source_operation->ctx.esp_ctx, 
                         &target_operation->ctx.esp_ctx ) );
 #endif /* ESP_SHA_DRIVER_ENABLED */
+#if defined(ESP_MD5_DRIVER_ENABLED)
+        case ESP_MD5_TRANSPARENT_DRIVER_ID:
+            target_operation->id = ESP_MD5_TRANSPARENT_DRIVER_ID;
+            return( esp_md5_hash_clone(
+                        &source_operation->ctx.md5_ctx, 
+                        &target_operation->ctx.md5_ctx ) );
+#endif /* ESP_MD5_DRIVER_ENABLED */
 #if defined(PSA_CRYPTO_DRIVER_TEST)
         case MBEDTLS_TEST_TRANSPARENT_DRIVER_ID:
             target_operation->id = MBEDTLS_TEST_TRANSPARENT_DRIVER_ID;
@@ -1645,6 +1672,12 @@ static inline psa_status_t psa_driver_wrapper_hash_update(
                         &operation->ctx.esp_ctx, 
                         input, input_length ) );
 #endif /* ESP_SHA_DRIVER_ENABLED */
+#if defined(ESP_MD5_DRIVER_ENABLED)
+        case ESP_MD5_TRANSPARENT_DRIVER_ID:
+            return( esp_md5_hash_update(
+                        &operation->ctx.md5_ctx, 
+                        input, input_length ) );
+#endif /* ESP_MD5_DRIVER_ENABLED */
 #endif /* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */
         default:
             (void) input;
@@ -1680,6 +1713,12 @@ static inline psa_status_t psa_driver_wrapper_hash_finish(
                         &operation->ctx.esp_ctx,
                         hash, hash_size, hash_length ) );
 #endif /* ESP_SHA_DRIVER_ENABLED */
+#if defined(ESP_MD5_DRIVER_ENABLED)
+        case ESP_MD5_TRANSPARENT_DRIVER_ID:
+            return( esp_md5_hash_finish(
+                        &operation->ctx.md5_ctx,
+                        hash, hash_size, hash_length ) );
+#endif /* ESP_MD5_DRIVER_ENABLED */
 #endif /* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */
         default:
             (void) hash;
@@ -1710,6 +1749,11 @@ static inline psa_status_t psa_driver_wrapper_hash_abort(
             return( esp_sha_hash_abort(
                         &operation->ctx.esp_ctx ) );
 #endif /* ESP_SHA_DRIVER_ENABLED */
+#if defined(ESP_MD5_DRIVER_ENABLED)
+        case ESP_MD5_TRANSPARENT_DRIVER_ID:
+            return( esp_md5_hash_abort(
+                        &operation->ctx.md5_ctx ) );
+#endif /* ESP_MD5_DRIVER_ENABLED */
 #endif /* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */
         default:
             return( PSA_ERROR_BAD_STATE );

@@ -33,13 +33,15 @@
  * declared during the autogeneration process. */
 
 
- #if defined(ESP_AES_DRIVER_ENABLED)
- #include "psa_crypto_driver_esp_aes_contexts.h"
- #endif
-
+#if defined(ESP_AES_DRIVER_ENABLED)
+#include "psa_crypto_driver_esp_aes_contexts.h"
+#endif /* ESP_AES_DRIVER_ENABLED */
 #if defined(ESP_ECDSA_DRIVER_ENABLED)
 #include "psa_crypto_driver_esp_ecdsa_contexts.h"
-#endif
+#endif /* ESP_ECDSA_DRIVER_ENABLED */
+#if defined(ESP_RSA_DS_DRIVER_ENABLED)
+#include "psa_crypto_driver_esp_rsa_ds_contexts.h"
+#endif /* ESP_RSA_DS_DRIVER_ENABLED */
 
 #if defined(MBEDTLS_TEST_LIBTESTDRIVER1)
 #include <libtestdriver1/tf-psa-crypto/include/psa/crypto.h>
@@ -147,6 +149,9 @@ typedef union {
     mbedtls_psa_sign_hash_interruptible_operation_t mbedtls_ctx;
 #if defined(ESP_ECDSA_DRIVER_ENABLED) && defined(ESP_ECDSA_SIGN_DRIVER_ENABLED)
     esp_ecdsa_opaque_sign_hash_operation_t esp_ecdsa_opaque_sign_hash_ctx;
+#endif
+#if defined(ESP_RSA_DS_DRIVER_ENABLED)
+    esp_rsa_ds_opaque_sign_hash_operation_t esp_rsa_ds_opaque_sign_hash_ctx;
 #endif
 } psa_driver_sign_hash_interruptible_context_t;
 

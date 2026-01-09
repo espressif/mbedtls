@@ -62,6 +62,12 @@
 #include "../../../port/psa_driver/include/psa_crypto_driver_esp_ecdsa.h"
 
 #endif
+#if defined(ESP_RSA_DS_DRIVER_ENABLED)
+#include "../../../port/psa_driver/include/psa_crypto_driver_esp_rsa_ds.h"
+
+#endif
+
+
 /* END-driver headers */
 
 /* Auto-generated values depending on which drivers are registered.
@@ -78,6 +84,7 @@
 #define ESP_ECDSA_TRANSPARENT_DRIVER_ID (8)
 #define ESP_ECDSA_OPAQUE_DRIVER_ID (9)
 
+#define ESP_RSA_DS_OPAQUE_DRIVER_ID (10)
 /* END-driver id */
 
 /* BEGIN-Common Macro definitions */
@@ -350,6 +357,23 @@ static inline psa_status_t psa_driver_wrapper_sign_hash(
             }
             return PSA_ERROR_INVALID_ARGUMENT;
 #endif /* defined(ESP_ECDSA_DRIVER_ENABLED) && defined(ESP_ECDSA_SIGN_DRIVER_ENABLED) */
+#if defined(ESP_RSA_DS_DRIVER_ENABLED)
+        case PSA_KEY_LOCATION_ESP_RSA_DS:
+            if( PSA_KEY_TYPE_IS_RSA( psa_get_key_type(attributes) )  &&
+                (PSA_ALG_IS_RSA_PKCS1V15_SIGN(alg) || PSA_ALG_IS_RSA_PSS(alg)))
+            {
+                return( esp_rsa_ds_opaque_signature_sign_hash( attributes,
+                                                        key_buffer,
+                                                        key_buffer_size,
+                                                        alg,
+                                                        hash,
+                                                        hash_length,
+                                                        signature,
+                                                        signature_size,
+                                                        signature_length ) );
+            }
+            return PSA_ERROR_INVALID_ARGUMENT;
+#endif /* ESP_RSA_DS_DRIVER_ENABLED */
 #endif /* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */
         default:
             /* Key is declared with a lifetime not known to us */
@@ -576,6 +600,25 @@ static inline psa_status_t psa_driver_wrapper_sign_hash_start(
                 return PSA_ERROR_INVALID_ARGUMENT;
             }
 #endif /* defined(ESP_ECDSA_DRIVER_ENABLED) && defined(ESP_ECDSA_SIGN_DRIVER_ENABLED) */
+
+#if defined(ESP_RSA_DS_DRIVER_ENABLED)
+        case PSA_KEY_LOCATION_ESP_RSA_DS:
+            if( PSA_KEY_TYPE_IS_RSA( psa_get_key_type(attributes) )  &&
+                (PSA_ALG_IS_RSA_PKCS1V15_SIGN(alg) || PSA_ALG_IS_RSA_PSS(alg)))
+            {
+                status = esp_rsa_ds_opaque_sign_hash_start( &operation->ctx.esp_rsa_ds_opaque_sign_hash_ctx,
+                                                            attributes,
+                                                            key_buffer, key_buffer_size,
+                                                            alg, hash, hash_length );
+                if (status == PSA_SUCCESS) {
+                    operation->id = ESP_RSA_DS_OPAQUE_DRIVER_ID;
+                }
+                return status;
+            } else {
+                return PSA_ERROR_INVALID_ARGUMENT;
+            }
+            
+#endif /* defined(ESP_RSA_DS_DRIVER_ENABLED) */
         default:
             /* Key is declared with a lifetime not known to us */
             status = PSA_ERROR_INVALID_ARGUMENT;
@@ -608,6 +651,12 @@ static inline psa_status_t psa_driver_wrapper_sign_hash_complete(
                                                         signature, signature_size,
                                                         signature_length );
 #endif /* defined(ESP_ECDSA_DRIVER_ENABLED) && defined(ESP_ECDSA_SIGN_DRIVER_ENABLED) */
+#if defined(ESP_RSA_DS_DRIVER_ENABLED)
+        case ESP_RSA_DS_OPAQUE_DRIVER_ID:
+            return esp_rsa_ds_opaque_sign_hash_complete( &operation->ctx.esp_rsa_ds_opaque_sign_hash_ctx,
+                                                        signature, signature_size,
+                                                        signature_length );
+#endif /* defined(ESP_RSA_DS_DRIVER_ENABLED) */
 #endif /* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */
     }
 
@@ -635,6 +684,10 @@ static inline psa_status_t psa_driver_wrapper_sign_hash_abort(
         case ESP_ECDSA_OPAQUE_DRIVER_ID:
             return esp_ecdsa_opaque_sign_hash_abort( &operation->ctx.esp_ecdsa_opaque_sign_hash_ctx );
 #endif /* defined(ESP_ECDSA_DRIVER_ENABLED) && defined(ESP_ECDSA_SIGN_DRIVER_ENABLED) */
+#if defined(ESP_RSA_DS_DRIVER_ENABLED)
+        case ESP_RSA_DS_OPAQUE_DRIVER_ID:
+            return esp_rsa_ds_opaque_sign_hash_abort( &operation->ctx.esp_rsa_ds_opaque_sign_hash_ctx );
+#endif /* defined(ESP_RSA_DS_DRIVER_ENABLED) */
 #endif /* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */
     }
 
@@ -814,6 +867,13 @@ static inline psa_status_t psa_driver_wrapper_get_key_buffer_size_from_key_data(
             return( ( *key_buffer_size != 0 ) ?
                     PSA_SUCCESS : PSA_ERROR_NOT_SUPPORTED );
 #endif /* defined(ESP_ECDSA_DRIVER_ENABLED) && defined(ESP_ECDSA_SIGN_DRIVER_ENABLED) */
+#if defined(ESP_RSA_DS_DRIVER_ENABLED)
+        case PSA_KEY_LOCATION_ESP_RSA_DS:
+            *key_buffer_size = esp_rsa_ds_opaque_size_function( key_type,
+                                     PSA_BYTES_TO_BITS( data_length ) );
+            return( ( *key_buffer_size != 0 ) ?
+                    PSA_SUCCESS : PSA_ERROR_NOT_SUPPORTED );
+#endif /* ESP_RSA_DS_DRIVER_ENABLED */
 
         default:
             (void)key_type;
@@ -993,6 +1053,19 @@ static inline psa_status_t psa_driver_wrapper_import_key(
                         key_buffer, key_buffer_size,
                         key_buffer_length, bits ) );
 #endif /* defined(ESP_ECDSA_DRIVER_ENABLED) && defined(ESP_ECDSA_SIGN_DRIVER_ENABLED) */
+
+#if defined(ESP_RSA_DS_DRIVER_ENABLED)
+        case PSA_KEY_LOCATION_ESP_RSA_DS:
+            return( esp_rsa_ds_opaque_import_key
+                            (attributes,
+                            data,
+                            data_length,
+                            key_buffer,
+                            key_buffer_size,
+                            key_buffer_length,
+                            bits
+                            ));
+#endif /* ESP_RSA_DS_DRIVER_ENABLED */
 
 #endif /* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */
         default:
@@ -1669,14 +1742,14 @@ static inline psa_status_t psa_driver_wrapper_hash_compute(
 #endif /* PSA_CRYPTO_DRIVER_TEST */
 
 #if defined(ESP_SHA_DRIVER_ENABLED)
-    status = esp_sha_hash_compute(alg, input, input_length, 
+    status = esp_sha_hash_compute(alg, input, input_length,
                                      hash, hash_size, hash_length );
     if( status != PSA_ERROR_NOT_SUPPORTED )
         return( status );
 #endif /* ESP_SHA_DRIVER_ENABLED */
 
 #if defined(ESP_MD5_DRIVER_ENABLED)
-    status = esp_md5_hash_compute(alg, input, input_length, 
+    status = esp_md5_hash_compute(alg, input, input_length,
                                      hash, hash_size, hash_length );
     if( status != PSA_ERROR_NOT_SUPPORTED )
         return( status );
@@ -1771,14 +1844,14 @@ static inline psa_status_t psa_driver_wrapper_hash_clone(
         case ESP_SHA_TRANSPARENT_DRIVER_ID:
             target_operation->id = ESP_SHA_TRANSPARENT_DRIVER_ID;
             return( esp_sha_hash_clone(
-                        &source_operation->ctx.esp_ctx, 
+                        &source_operation->ctx.esp_ctx,
                         &target_operation->ctx.esp_ctx ) );
 #endif /* ESP_SHA_DRIVER_ENABLED */
 #if defined(ESP_MD5_DRIVER_ENABLED)
         case ESP_MD5_TRANSPARENT_DRIVER_ID:
             target_operation->id = ESP_MD5_TRANSPARENT_DRIVER_ID;
             return( esp_md5_hash_clone(
-                        &source_operation->ctx.md5_ctx, 
+                        &source_operation->ctx.md5_ctx,
                         &target_operation->ctx.md5_ctx ) );
 #endif /* ESP_MD5_DRIVER_ENABLED */
 #if defined(PSA_CRYPTO_DRIVER_TEST)
@@ -1818,13 +1891,13 @@ static inline psa_status_t psa_driver_wrapper_hash_update(
 #if defined(ESP_SHA_DRIVER_ENABLED)
         case ESP_SHA_TRANSPARENT_DRIVER_ID:
             return( esp_sha_hash_update(
-                        &operation->ctx.esp_ctx, 
+                        &operation->ctx.esp_ctx,
                         input, input_length ) );
 #endif /* ESP_SHA_DRIVER_ENABLED */
 #if defined(ESP_MD5_DRIVER_ENABLED)
         case ESP_MD5_TRANSPARENT_DRIVER_ID:
             return( esp_md5_hash_update(
-                        &operation->ctx.md5_ctx, 
+                        &operation->ctx.md5_ctx,
                         input, input_length ) );
 #endif /* ESP_MD5_DRIVER_ENABLED */
 #endif /* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */
@@ -2985,6 +3058,13 @@ static inline psa_status_t psa_driver_wrapper_asymmetric_decrypt(
                         salt, salt_length, output, output_size,
                         output_length ) );
 #endif /* PSA_CRYPTO_DRIVER_TEST */
+#if defined(ESP_RSA_DS_DRIVER_ENABLED)
+        case PSA_KEY_LOCATION_ESP_RSA_DS:
+            return( esp_rsa_ds_opaque_asymmetric_decrypt( attributes,
+                        key_buffer, key_buffer_size, alg, input, input_length,
+                        salt, salt_length, output, output_size,
+                        output_length ));
+#endif /* ESP_RSA_DS_DRIVER_ENABLED */
 #endif /* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */
 
         default:

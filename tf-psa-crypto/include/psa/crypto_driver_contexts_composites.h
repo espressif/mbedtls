@@ -32,16 +32,25 @@
 /* Include the context structure definitions for those drivers that were
  * declared during the autogeneration process. */
 
-
 #if defined(ESP_AES_DRIVER_ENABLED)
 #include "psa_crypto_driver_esp_aes_contexts.h"
 #endif /* ESP_AES_DRIVER_ENABLED */
+
 #if defined(ESP_ECDSA_DRIVER_ENABLED)
 #include "psa_crypto_driver_esp_ecdsa_contexts.h"
 #endif /* ESP_ECDSA_DRIVER_ENABLED */
+
 #if defined(ESP_RSA_DS_DRIVER_ENABLED)
 #include "psa_crypto_driver_esp_rsa_ds_contexts.h"
 #endif /* ESP_RSA_DS_DRIVER_ENABLED */
+
+#if defined(ESP_CMAC_DRIVER_ENABLED)
+#include "psa_crypto_driver_esp_cmac_contexts.h"
+#endif
+
+#if defined(ESP_SHA_DRIVER_ENABLED)
+#include "psa_crypto_driver_esp_hmac_contexts.h"
+#endif
 
 #if defined(MBEDTLS_TEST_LIBTESTDRIVER1)
 #include <libtestdriver1/tf-psa-crypto/include/psa/crypto.h>
@@ -130,6 +139,12 @@ typedef union {
 #if defined(PSA_CRYPTO_DRIVER_TEST)
     mbedtls_transparent_test_driver_mac_operation_t transparent_test_driver_ctx;
     mbedtls_opaque_test_driver_mac_operation_t opaque_test_driver_ctx;
+#endif
+#if defined(ESP_CMAC_DRIVER_ENABLED)
+    esp_cmac_operation_t esp_cmac_ctx;
+#endif
+#if defined(ESP_SHA_DRIVER_ENABLED)
+    esp_hmac_operation_t esp_hmac_ctx;
 #endif
 } psa_driver_mac_context_t;
 

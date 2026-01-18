@@ -44,13 +44,13 @@
 /* Headers for esp_sha transparent driver */
 #if defined(ESP_SHA_DRIVER_ENABLED)
 #include "../../../port/psa_driver/include/psa_crypto_driver_esp_sha.h"
-
+#include "../../../port/psa_driver/include/psa_crypto_driver_esp_hmac.h"
 #endif
+
 /* Headers for esp_aes transparent driver */
 #if defined(ESP_AES_DRIVER_ENABLED)
 #include "../../../port/psa_driver/include/psa_crypto_driver_esp_aes.h"
 #include "../../../port/psa_driver/include/psa_crypto_driver_esp_aes_gcm.h"
-
 #endif
 
 #if defined(ESP_MD5_DRIVER_ENABLED)
@@ -62,12 +62,16 @@
 #include "../../../port/psa_driver/include/psa_crypto_driver_esp_ecdsa.h"
 
 #endif
+
 #if defined(ESP_RSA_DS_DRIVER_ENABLED)
 #include "../../../port/psa_driver/include/psa_crypto_driver_esp_rsa_ds.h"
 
 #endif
 
+#if defined(ESP_CMAC_DRIVER_ENABLED)
+#include "../../../port/psa_driver/include/psa_crypto_driver_esp_cmac.h"
 
+#endif
 /* END-driver headers */
 
 /* Auto-generated values depending on which drivers are registered.
@@ -83,8 +87,10 @@
 #define ESP_MD5_TRANSPARENT_DRIVER_ID (7)
 #define ESP_ECDSA_TRANSPARENT_DRIVER_ID (8)
 #define ESP_ECDSA_OPAQUE_DRIVER_ID (9)
-
 #define ESP_RSA_DS_OPAQUE_DRIVER_ID (10)
+#define ESP_CMAC_TRANSPARENT_DRIVER_ID (11)
+#define ESP_HMAC_TRANSPARENT_DRIVER_ID (12)
+
 /* END-driver id */
 
 /* BEGIN-Common Macro definitions */
@@ -2599,11 +2605,30 @@ static inline psa_status_t psa_driver_wrapper_mac_compute(
             /* Key is stored in the slot in export representation, so
              * cycle through all known transparent accelerators */
 #if defined(PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT)
-#if defined(ESP_AES_DRIVER_ENABLED) && defined(ESP_AES_SHA_DRIVER_ENABLED)
-            return (esp_cmac_mac_compute(attributes, key_buffer, key_buffer_size, alg,
-                input, input_length,
-                mac, mac_size, mac_length ));
-#endif /* ESP_AES_DRIVER_ENABLED */
+#if defined(ESP_CMAC_DRIVER_ENABLED)
+            if (PSA_ALG_FULL_LENGTH_MAC(alg) == PSA_ALG_CMAC) {
+                status = esp_cmac_compute(attributes, key_buffer, key_buffer_size, alg,
+                                        input, input_length,
+                                        mac, mac_size, mac_length );
+                if (status != PSA_SUCCESS) {
+                    return status;
+                }
+            }
+#endif /* ESP_CMAC_DRIVER_ENABLED */
+#if defined(ESP_SHA_DRIVER_ENABLED)
+            if (PSA_ALG_IS_HMAC(alg)) {
+                status = esp_hmac_compute(attributes, key_buffer, key_buffer_size, alg,
+                                        input, input_length,
+                                        mac, mac_size, mac_length );
+                if (status != PSA_SUCCESS) {
+                    return status;
+                }
+            }
+#endif /* ESP_SHA_DRIVER_ENABLED */
+            // TODO: Maybe not required? check all soft fallback mechanisms
+            if (status != PSA_ERROR_NOT_SUPPORTED) {
+                return status;
+            }
 #if defined(PSA_CRYPTO_DRIVER_TEST)
             status = mbedtls_test_transparent_mac_compute(
                 attributes, key_buffer, key_buffer_size, alg,
@@ -2668,15 +2693,29 @@ static inline psa_status_t psa_driver_wrapper_mac_sign_setup(
             /* Key is stored in the slot in export representation, so
              * cycle through all known transparent accelerators */
 #if defined(PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT)
-#if defined(ESP_AES_DRIVER_ENABLED) && defined(ESP_AES_SHA_DRIVER_ENABLED)
-            status = (esp_cmac_mac_setup( &operation->ctx.esp_cmac_ctx,
+#if defined(ESP_CMAC_DRIVER_ENABLED)
+            if (PSA_ALG_FULL_LENGTH_MAC(alg) == PSA_ALG_CMAC) {
+                status = esp_cmac_setup( &operation->ctx.esp_cmac_ctx,
                                             attributes,
                                             key_buffer, key_buffer_size,
-                                            alg ));
-            if( status == PSA_SUCCESS )
-                operation->id = ESP_CMAC_TRANSPARENT_DRIVER_ID;
-            return status;
-#endif /* ESP_AES_DRIVER_ENABLED && defined(ESP_AES_SHA_DRIVER_ENABLED) */
+                                            alg );
+                if( status == PSA_SUCCESS )
+                    operation->id = ESP_CMAC_TRANSPARENT_DRIVER_ID;
+            } else
+#endif /* ESP_CMAC_DRIVER_ENABLED */
+#if defined(ESP_SHA_DRIVER_ENABLED)
+            if (PSA_ALG_IS_HMAC(alg)) {
+                status = esp_hmac_setup( &operation->ctx.esp_hmac_ctx,
+                                        attributes,
+                                        key_buffer, key_buffer_size,
+                                        alg );
+                if ( status == PSA_SUCCESS )
+                    operation->id = ESP_HMAC_TRANSPARENT_DRIVER_ID;
+            }
+#endif /* ESP_SHA_DRIVER_ENABLED */
+            if (status != PSA_ERROR_NOT_SUPPORTED) {
+                return status;
+            }
 #if defined(PSA_CRYPTO_DRIVER_TEST)
             status = mbedtls_test_transparent_mac_sign_setup(
                 &operation->ctx.transparent_test_driver_ctx,
@@ -2749,15 +2788,29 @@ static inline psa_status_t psa_driver_wrapper_mac_verify_setup(
             /* Key is stored in the slot in export representation, so
              * cycle through all known transparent accelerators */
 #if defined(PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT)
-#if defined(ESP_AES_DRIVER_ENABLED) && defined(ESP_AES_SHA_DRIVER_ENABLED)
-            status = (esp_cmac_mac_setup( &operation->ctx.esp_cmac_ctx,
+#if defined(ESP_CMAC_DRIVER_ENABLED)
+            if (PSA_ALG_FULL_LENGTH_MAC(alg) == PSA_ALG_CMAC) {
+                status = esp_cmac_setup( &operation->ctx.esp_cmac_ctx,
                                             attributes,
                                             key_buffer, key_buffer_size,
-                                            alg ));
-            if( status == PSA_SUCCESS )
-                operation->id = ESP_CMAC_TRANSPARENT_DRIVER_ID;
-            return status;
-#endif /* ESP_AES_DRIVER_ENABLED */
+                                            alg );
+                if( status == PSA_SUCCESS )
+                    operation->id = ESP_CMAC_TRANSPARENT_DRIVER_ID;
+            } else
+#endif /* ESP_CMAC_DRIVER_ENABLED */
+#if defined(ESP_SHA_DRIVER_ENABLED)
+            if (PSA_ALG_IS_HMAC(alg)) {
+                status = esp_hmac_setup( &operation->ctx.esp_hmac_ctx,
+                                            attributes,
+                                            key_buffer, key_buffer_size,
+                                            alg );
+                if (status == PSA_SUCCESS)
+                    operation->id = ESP_HMAC_TRANSPARENT_DRIVER_ID;
+            }
+#endif /* ESP_SHA_DRIVER_ENABLED */
+            if (status != PSA_ERROR_NOT_SUPPORTED) {
+                return status;
+            }
 #if defined(PSA_CRYPTO_DRIVER_TEST)
             status = mbedtls_test_transparent_mac_verify_setup(
                 &operation->ctx.transparent_test_driver_ctx,
@@ -2827,11 +2880,16 @@ static inline psa_status_t psa_driver_wrapper_mac_update(
 #endif /* MBEDTLS_PSA_BUILTIN_MAC */
 
 #if defined(PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT)
-#if defined(ESP_AES_DRIVER_ENABLED) && defined(ESP_AES_SHA_DRIVER_ENABLED)
+#if defined(ESP_CMAC_DRIVER_ENABLED)
         case ESP_CMAC_TRANSPARENT_DRIVER_ID:
-            return (esp_cmac_mac_update( &operation->ctx.esp_cmac_ctx,
-                                           input, input_length ));
-#endif /* ESP_AES_DRIVER_ENABLED && defined(ESP_AES_SHA_DRIVER_ENABLED) */
+            return (esp_cmac_update( &operation->ctx.esp_cmac_ctx,
+                                    input, input_length ));
+#endif /* ESP_CMAC_DRIVER_ENABLED */
+#if defined(ESP_SHA_DRIVER_ENABLED)
+        case ESP_HMAC_TRANSPARENT_DRIVER_ID:
+            return (esp_hmac_update( &operation->ctx.esp_hmac_ctx,
+                                    input, input_length ));
+#endif /* ESP_SHA_DRIVER_ENABLED */
 #if defined(PSA_CRYPTO_DRIVER_TEST)
         case MBEDTLS_TEST_TRANSPARENT_DRIVER_ID:
             return( mbedtls_test_transparent_mac_update(
@@ -2866,11 +2924,16 @@ static inline psa_status_t psa_driver_wrapper_mac_sign_finish(
 #endif /* MBEDTLS_PSA_BUILTIN_MAC */
 
 #if defined(PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT)
-#if defined(ESP_AES_DRIVER_ENABLED) && defined(ESP_AES_SHA_DRIVER_ENABLED)
+#if defined(ESP_CMAC_DRIVER_ENABLED)
         case ESP_CMAC_TRANSPARENT_DRIVER_ID:
-            return (esp_cmac_mac_finish( &operation->ctx.esp_cmac_ctx,
-                                           mac, mac_size, mac_length ));
-#endif /* ESP_AES_DRIVER_ENABLED && defined(ESP_AES_SHA_DRIVER_ENABLED) */
+            return (esp_cmac_finish( &operation->ctx.esp_cmac_ctx,
+                                    mac, mac_size, mac_length ));
+#endif /* ESP_CMAC_DRIVER_ENABLED */
+#if defined(ESP_SHA_DRIVER_ENABLED)
+        case ESP_HMAC_TRANSPARENT_DRIVER_ID:
+            return (esp_hmac_finish( &operation->ctx.esp_hmac_ctx,
+                                    mac, mac_size, mac_length ));
+#endif /* ESP_SHA_DRIVER_ENABLED */
 #if defined(PSA_CRYPTO_DRIVER_TEST)
         case MBEDTLS_TEST_TRANSPARENT_DRIVER_ID:
             return( mbedtls_test_transparent_mac_sign_finish(
@@ -2905,11 +2968,16 @@ static inline psa_status_t psa_driver_wrapper_mac_verify_finish(
 #endif /* MBEDTLS_PSA_BUILTIN_MAC */
 
 #if defined(PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT)
-#if defined(ESP_AES_DRIVER_ENABLED) && defined(ESP_AES_SHA_DRIVER_ENABLED)
+#if defined(ESP_CMAC_DRIVER_ENABLED)
         case ESP_CMAC_TRANSPARENT_DRIVER_ID:
-            return (esp_cmac_mac_verify_finish( &operation->ctx.esp_cmac_ctx,
+            return (esp_cmac_verify_finish( &operation->ctx.esp_cmac_ctx,
                                            mac, mac_length ));
-#endif /* ESP_AES_DRIVER_ENABLED && defined(ESP_AES_SHA_DRIVER_ENABLED) */
+#endif /* ESP_CMAC_DRIVER_ENABLED */
+#if defined(ESP_SHA_DRIVER_ENABLED)
+        case ESP_HMAC_TRANSPARENT_DRIVER_ID:
+            return (esp_hmac_verify_finish( &operation->ctx.esp_hmac_ctx,
+                                           mac, mac_length ));
+#endif /* ESP_SHA_DRIVER_ENABLED */
 #if defined(PSA_CRYPTO_DRIVER_TEST)
         case MBEDTLS_TEST_TRANSPARENT_DRIVER_ID:
             return( mbedtls_test_transparent_mac_verify_finish(
@@ -2940,10 +3008,14 @@ static inline psa_status_t psa_driver_wrapper_mac_abort(
 #endif /* MBEDTLS_PSA_BUILTIN_MAC */
 
 #if defined(PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT)
-#if defined(ESP_AES_DRIVER_ENABLED) && defined(ESP_AES_SHA_DRIVER_ENABLED)
+#if defined(ESP_CMAC_DRIVER_ENABLED)
         case ESP_CMAC_TRANSPARENT_DRIVER_ID:
-            return (esp_cmac_mac_abort( &operation->ctx.esp_cmac_ctx ));
-#endif /* ESP_AES_DRIVER_ENABLED && defined(ESP_AES_SHA_DRIVER_ENABLED) */
+            return (esp_cmac_abort( &operation->ctx.esp_cmac_ctx ));
+#endif /* ESP_CMAC_DRIVER_ENABLED */
+#if defined(ESP_SHA_DRIVER_ENABLED)
+        case ESP_HMAC_TRANSPARENT_DRIVER_ID:
+            return (esp_hmac_abort( &operation->ctx.esp_hmac_ctx ));
+#endif /* ESP_SHA_DRIVER_ENABLED */
 #if defined(PSA_CRYPTO_DRIVER_TEST)
         case MBEDTLS_TEST_TRANSPARENT_DRIVER_ID:
             return( mbedtls_test_transparent_mac_abort(

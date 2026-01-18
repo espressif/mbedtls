@@ -40,17 +40,6 @@
 #include "../drivers/p256-m/p256-m_driver_entrypoints.h"
 
 #endif
-/* Headers for esp_sha transparent driver */
-#if defined(ESP_SHA_DRIVER_ENABLED)
-#include "../../../port/psa_driver/include/psa_crypto_driver_esp_sha.h"
-
-#endif
-/* Headers for esp_aes transparent driver */
-#if defined(ESP_AES_DRIVER_ENABLED)
-#include "../../../port/psa_driver/include/psa_crypto_driver_esp_aes.h"
-#include "../../../port/psa_driver/include/psa_crypto_driver_esp_aes_gcm.h"
-
-#endif
 /* Headers for esp_ecdsa opaque driver */
 #if defined(ESP_ECDSA_DRIVER_ENABLED)
 #include "../../../port/psa_driver/include/psa_crypto_driver_esp_ecdsa.h"
@@ -67,8 +56,6 @@
 #define MBEDTLS_TEST_OPAQUE_DRIVER_ID (2)
 #define MBEDTLS_TEST_TRANSPARENT_DRIVER_ID (3)
 #define P256_TRANSPARENT_DRIVER_ID (4)
-#define ESP_SHA_TRANSPARENT_DRIVER_ID (5)
-#define ESP_AES_TRANSPARENT_DRIVER_ID (6)
 
 /* END-driver id */
 

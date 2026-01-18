@@ -48,8 +48,12 @@
 #include "psa_crypto_driver_esp_cmac_contexts.h"
 #endif
 
-#if defined(ESP_SHA_DRIVER_ENABLED)
-#include "psa_crypto_driver_esp_hmac_contexts.h"
+#if defined(ESP_HMAC_TRANSPARENT_DRIVER_ENABLED)
+#include "psa_crypto_driver_esp_hmac_transparent_contexts.h"
+#endif
+
+#if defined(ESP_HMAC_OPAQUE_DRIVER_ENABLED)
+#include "psa_crypto_driver_esp_hmac_opaque_contexts.h"
 #endif
 
 #if defined(MBEDTLS_TEST_LIBTESTDRIVER1)
@@ -143,8 +147,11 @@ typedef union {
 #if defined(ESP_CMAC_DRIVER_ENABLED)
     esp_cmac_operation_t esp_cmac_ctx;
 #endif
-#if defined(ESP_SHA_DRIVER_ENABLED)
-    esp_hmac_operation_t esp_hmac_ctx;
+#if defined(ESP_HMAC_TRANSPARENT_DRIVER_ENABLED)
+    esp_hmac_transparent_operation_t esp_hmac_transparent_ctx;
+#endif
+#if defined(ESP_HMAC_OPAQUE_DRIVER_ENABLED)
+    esp_hmac_opaque_operation_t esp_hmac_opaque_ctx;
 #endif
 } psa_driver_mac_context_t;
 

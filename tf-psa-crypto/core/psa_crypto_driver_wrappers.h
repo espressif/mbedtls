@@ -86,9 +86,9 @@
 
 #endif
 
-/* Headers for secure element opaque driver */
-#if defined(SECURE_ELEMENT_DRIVER_ENABLED)
-#include "../../../port/psa_driver/include/psa_crypto_driver_secure_element.h"
+/* Headers for atca_ecdsa opaque driver */
+#if defined(ATCA_ECDSA_DRIVER_ENABLED)
+#include "../../../port/psa_driver/include/psa_crypto_driver_atca_ecdsa.h"
 #endif
 /* END-driver headers */
 
@@ -109,7 +109,7 @@
 #define ESP_CMAC_TRANSPARENT_DRIVER_ID (11)
 #define ESP_HMAC_TRANSPARENT_DRIVER_ID (12)
 #define ESP_HMAC_OPAQUE_DRIVER_ID (13)
-#define SECURE_ELEMENT_OPAQUE_DRIVER_ID (14)
+#define ATCA_ECDSA_OPAQUE_DRIVER_ID (14)
 
 /* END-driver id */
 
@@ -400,15 +400,15 @@ static inline psa_status_t psa_driver_wrapper_sign_hash(
             }
             return PSA_ERROR_INVALID_ARGUMENT;
 #endif /* ESP_RSA_DS_DRIVER_ENABLED */
-#if defined(SECURE_ELEMENT_DRIVER_ENABLED)
-        case PSA_KEY_LOCATION_SECURE_ELEMENT:
-            return( secure_element_opaque_sign_hash(
+#if defined(ATCA_ECDSA_DRIVER_ENABLED) && defined(ATCA_ECDSA_SIGN_DRIVER_ENABLED)
+        case PSA_KEY_LOCATION_ATCA_ECDSA:
+            return( atca_ecdsa_opaque_sign_hash(
                         attributes,
                         key_buffer, key_buffer_size,
                         alg, hash, hash_length,
                         signature, signature_size,
                         signature_length ) );
-#endif /* SECURE_ELEMENT_DRIVER_ENABLED */
+#endif /* ATCA_ECDSA_DRIVER_ENABLED && ATCA_ECDSA_SIGN_DRIVER_ENABLED */
 #endif /* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */
         default:
             /* Key is declared with a lifetime not known to us */
@@ -483,8 +483,8 @@ static inline psa_status_t psa_driver_wrapper_verify_hash(
                 return( status );
             }
 #endif /* MBEDTLS_PSA_P256M_DRIVER_ENABLED */
-#if defined(SECURE_ELEMENT_DRIVER_ENABLED)
-            status = secure_element_transparent_verify_hash(
+#if defined(ATCA_ECDSA_DRIVER_ENABLED) && defined(ATCA_ECDSA_VERIFY_DRIVER_ENABLED)
+            status = atca_ecdsa_transparent_verify_hash(
                          attributes,
                          key_buffer,
                          key_buffer_size,
@@ -495,7 +495,7 @@ static inline psa_status_t psa_driver_wrapper_verify_hash(
                          signature_length );
             if( status != PSA_ERROR_NOT_SUPPORTED )
                 return( status );
-#endif /* SECURE_ELEMENT_DRIVER_ENABLED */
+#endif /* ATCA_ECDSA_DRIVER_ENABLED && ATCA_ECDSA_VERIFY_DRIVER_ENABLED */
 #endif /* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */
 
             return( psa_verify_hash_builtin( attributes,
@@ -910,35 +910,34 @@ static inline psa_status_t psa_driver_wrapper_get_key_buffer_size_from_key_data(
 #endif /* PSA_CRYPTO_DRIVER_TEST */
 #if defined(ESP_ECDSA_DRIVER_ENABLED) && defined(ESP_ECDSA_SIGN_DRIVER_ENABLED)
         case PSA_KEY_LOCATION_ESP_ECDSA:
-            *key_buffer_size = esp_ecdsa_opaque_size_function( attributes,
-                                     key_type, data, data_length );
+            *key_buffer_size = esp_ecdsa_opaque_size_function( key_type,
+                                     PSA_BYTES_TO_BITS( data_length ) );
             return( ( *key_buffer_size != 0 ) ?
                     PSA_SUCCESS : PSA_ERROR_NOT_SUPPORTED );
 #endif /* defined(ESP_ECDSA_DRIVER_ENABLED) && defined(ESP_ECDSA_SIGN_DRIVER_ENABLED) */
 #if defined(ESP_RSA_DS_DRIVER_ENABLED)
         case PSA_KEY_LOCATION_ESP_RSA_DS:
-            *key_buffer_size = esp_rsa_ds_opaque_size_function( attributes,
-                                     key_type,
-                                     data, data_length );
+            *key_buffer_size = esp_rsa_ds_opaque_size_function( key_type,
+                                     PSA_BYTES_TO_BITS( data_length ) );
             return( ( *key_buffer_size != 0 ) ?
                     PSA_SUCCESS : PSA_ERROR_NOT_SUPPORTED );
 #endif /* ESP_RSA_DS_DRIVER_ENABLED */
 
 #if defined(ESP_HMAC_OPAQUE_DRIVER_ENABLED)
         case PSA_KEY_LOCATION_ESP_HMAC:
-            *key_buffer_size = esp_hmac_opaque_size_function(attributes,
-                                     key_type, data, data_length );
+            *key_buffer_size = esp_hmac_opaque_size_function(key_type,
+                                     PSA_BYTES_TO_BITS( data_length ) );
             return( ( *key_buffer_size != 0 ) ?
                     PSA_SUCCESS : PSA_ERROR_NOT_SUPPORTED );
 #endif /* defined(ESP_HMAC_OPAQUE_DRIVER_ENABLED) */
 
-#if defined(SECURE_ELEMENT_DRIVER_ENABLED)
-        case PSA_KEY_LOCATION_SECURE_ELEMENT:
-            *key_buffer_size = secure_element_opaque_size_function( key_type,
+#if defined(ATCA_ECDSA_DRIVER_ENABLED) && defined(ATCA_ECDSA_SIGN_DRIVER_ENABLED)
+        case PSA_KEY_LOCATION_ATCA_ECDSA:
+            *key_buffer_size = atca_ecdsa_opaque_size_function( key_type,
                                      PSA_BYTES_TO_BITS( data_length ) );
             return( ( *key_buffer_size != 0 ) ?
                     PSA_SUCCESS : PSA_ERROR_NOT_SUPPORTED );
-#endif /* SECURE_ELEMENT_DRIVER_ENABLED */
+#endif /* ATCA_ECDSA_DRIVER_ENABLED && ATCA_ECDSA_SIGN_DRIVER_ENABLED */
 
         default:
             (void)key_type;
@@ -1138,14 +1137,14 @@ static inline psa_status_t psa_driver_wrapper_import_key(
                             ));
 #endif /* ESP_RSA_DS_DRIVER_ENABLED */
 
-#if defined(SECURE_ELEMENT_DRIVER_ENABLED)
-        case PSA_KEY_LOCATION_SECURE_ELEMENT:
-            return( secure_element_opaque_import_key(
+#if defined(ATCA_ECDSA_DRIVER_ENABLED) && defined(ATCA_ECDSA_SIGN_DRIVER_ENABLED)
+        case PSA_KEY_LOCATION_ATCA_ECDSA:
+            return( atca_ecdsa_opaque_import_key(
                         attributes,
                         data, data_length,
                         key_buffer, key_buffer_size,
                         key_buffer_length, bits ) );
-#endif /* SECURE_ELEMENT_DRIVER_ENABLED */
+#endif /* ATCA_ECDSA_DRIVER_ENABLED && ATCA_ECDSA_SIGN_DRIVER_ENABLED */
 #endif /* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */
         default:
             (void)status;

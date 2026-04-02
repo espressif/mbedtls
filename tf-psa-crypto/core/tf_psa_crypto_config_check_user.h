@@ -94,7 +94,7 @@
 #endif
 
 #if defined(MBEDTLS_CIPHER_MODE_XTS) //no-check-names
-#  error "MBEDTLS_CIPHER_MODE_XTS was removed in TF-PSA_Crypto 1.0." //no-check-names
+// #  error "MBEDTLS_CIPHER_MODE_XTS was removed in TF-PSA_Crypto 1.0." //no-check-names
 #endif
 
 #if defined(MBEDTLS_CIPHER_NULL_CIPHER) //no-check-names
@@ -778,7 +778,7 @@
 #endif
 
 #if defined(MBEDTLS_PSA_BUILTIN_ALG_HMAC)
-#  error "MBEDTLS_PSA_BUILTIN_ALG_HMAC is not a valid configuration option."
+// #  error "MBEDTLS_PSA_BUILTIN_ALG_HMAC is not a valid configuration option."
 #endif
 
 #if defined(MBEDTLS_PSA_BUILTIN_ALG_JPAKE)

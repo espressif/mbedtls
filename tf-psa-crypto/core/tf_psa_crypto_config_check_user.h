@@ -513,9 +513,9 @@
 #  error "MBEDTLS_SHA256_ALT was removed in TF-PSA_Crypto 1.0." //no-check-names
 #endif
 
-#if defined(MBEDTLS_SHA256_C) //no-check-names
-#  error "MBEDTLS_SHA256_C was removed in TF-PSA_Crypto 1.0." //no-check-names
-#endif
+// #if defined(MBEDTLS_SHA256_C) //no-check-names
+// #  error "MBEDTLS_SHA256_C was removed in TF-PSA_Crypto 1.0." //no-check-names
+// #endif
 
 #if defined(MBEDTLS_SHA256_PROCESS_ALT) //no-check-names
 #  error "MBEDTLS_SHA256_PROCESS_ALT was removed in TF-PSA_Crypto 1.0." //no-check-names

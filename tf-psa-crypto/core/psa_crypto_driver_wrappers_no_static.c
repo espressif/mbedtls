@@ -46,9 +46,9 @@
 
 #endif
 
-/* Headers for atca_ecdsa opaque driver */
-#if defined(ATCA_ECDSA_DRIVER_ENABLED)
-#include "../../../port/psa_driver/include/psa_crypto_driver_atca_ecdsa.h"
+/* Headers for secure element opaque driver */
+#if defined(SECURE_ELEMENT_DRIVER_ENABLED)
+#include "../../../port/psa_driver/include/psa_crypto_driver_secure_element.h"
 #endif
 
 /* END-driver headers */
@@ -112,13 +112,13 @@ psa_status_t psa_driver_wrapper_get_key_buffer_size(
                     PSA_SUCCESS : PSA_ERROR_NOT_SUPPORTED );
 #endif /* PSA_CRYPTO_DRIVER_TEST */
 
-#if defined(ATCA_ECDSA_DRIVER_ENABLED) && defined(ATCA_ECDSA_SIGN_DRIVER_ENABLED)
-        case PSA_KEY_LOCATION_ATCA_ECDSA:
-            *key_buffer_size = atca_ecdsa_opaque_size_function( key_type,
-                                                                key_bits );
+#if defined(SECURE_ELEMENT_DRIVER_ENABLED)
+        case PSA_KEY_LOCATION_SECURE_ELEMENT:
+            *key_buffer_size = secure_element_opaque_size_function( key_type,
+                                                              key_bits );
             return( ( *key_buffer_size != 0 ) ?
                     PSA_SUCCESS : PSA_ERROR_NOT_SUPPORTED );
-#endif /* ATCA_ECDSA_DRIVER_ENABLED && ATCA_ECDSA_SIGN_DRIVER_ENABLED */
+#endif /* SECURE_ELEMENT_DRIVER_ENABLED */
 
         default:
             (void)key_type;
@@ -215,19 +215,13 @@ psa_status_t psa_driver_wrapper_export_public_key(
             }
             return PSA_ERROR_INVALID_ARGUMENT;
 #endif /* defined(ESP_ECDSA_DRIVER_ENABLED) && defined(ESP_ECDSA_SIGN_DRIVER_ENABLED) */
-#if defined(ATCA_ECDSA_DRIVER_ENABLED) && defined(ATCA_ECDSA_SIGN_DRIVER_ENABLED)
-        case PSA_KEY_LOCATION_ATCA_ECDSA:
-            if( PSA_KEY_TYPE_IS_ECC( psa_get_key_type(attributes) ) &&
-                PSA_ALG_IS_ECDSA( psa_get_key_algorithm(attributes) ) &&
-                PSA_KEY_TYPE_ECC_GET_FAMILY(psa_get_key_type(attributes)) == PSA_ECC_FAMILY_SECP_R1)
-            {
-                return( atca_ecdsa_opaque_export_public_key(
-                            attributes,
-                            key_buffer, key_buffer_size,
-                            data, data_size, data_length ) );
-            }
-            return PSA_ERROR_INVALID_ARGUMENT;
-#endif /* ATCA_ECDSA_DRIVER_ENABLED && ATCA_ECDSA_SIGN_DRIVER_ENABLED */
+#if defined(SECURE_ELEMENT_DRIVER_ENABLED)
+        case PSA_KEY_LOCATION_SECURE_ELEMENT:
+            return( secure_element_opaque_export_public_key(
+                        attributes,
+                        key_buffer, key_buffer_size,
+                        data, data_size, data_length ) );
+#endif /* SECURE_ELEMENT_DRIVER_ENABLED */
 #endif /* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */
         default:
             /* Key is declared with a lifetime not known to us */

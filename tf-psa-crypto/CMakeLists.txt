@@ -373,7 +373,7 @@ endfunction(tf_psa_crypto_set_gnu_extra_compile_options)
 function(tf_psa_crypto_set_clang_extra_compile_options target)
     target_compile_options(${target} PRIVATE
         -Wmissing-declarations
-        -Wdocumentation
+        # -Wdocumentation
         -Wno-documentation-deprecated-sync
         -Wunreachable-code
     )

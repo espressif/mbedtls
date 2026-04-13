@@ -921,8 +921,9 @@ static inline psa_status_t psa_driver_wrapper_get_key_buffer_size_from_key_data(
 #endif /* defined(ESP_ECDSA_DRIVER_ENABLED) && defined(ESP_ECDSA_SIGN_DRIVER_ENABLED) */
 #if defined(ESP_RSA_DS_DRIVER_ENABLED)
         case PSA_KEY_LOCATION_ESP_RSA_DS:
-            *key_buffer_size = esp_rsa_ds_opaque_size_function( key_type,
-                                     PSA_BYTES_TO_BITS( data_length ) );
+            *key_buffer_size = esp_rsa_ds_opaque_size_function( attributes,
+                                     key_type,
+                                     data, data_length );
             return( ( *key_buffer_size != 0 ) ?
                     PSA_SUCCESS : PSA_ERROR_NOT_SUPPORTED );
 #endif /* ESP_RSA_DS_DRIVER_ENABLED */

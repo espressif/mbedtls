@@ -914,8 +914,8 @@ static inline psa_status_t psa_driver_wrapper_get_key_buffer_size_from_key_data(
 #endif /* PSA_CRYPTO_DRIVER_TEST */
 #if defined(ESP_ECDSA_DRIVER_ENABLED) && defined(ESP_ECDSA_SIGN_DRIVER_ENABLED)
         case PSA_KEY_LOCATION_ESP_ECDSA:
-            *key_buffer_size = esp_ecdsa_opaque_size_function( key_type,
-                                     PSA_BYTES_TO_BITS( data_length ) );
+            *key_buffer_size = esp_ecdsa_opaque_size_function( attributes,
+                                     key_type, data, data_length );
             return( ( *key_buffer_size != 0 ) ?
                     PSA_SUCCESS : PSA_ERROR_NOT_SUPPORTED );
 #endif /* defined(ESP_ECDSA_DRIVER_ENABLED) && defined(ESP_ECDSA_SIGN_DRIVER_ENABLED) */
@@ -929,8 +929,8 @@ static inline psa_status_t psa_driver_wrapper_get_key_buffer_size_from_key_data(
 
 #if defined(ESP_HMAC_OPAQUE_DRIVER_ENABLED)
         case PSA_KEY_LOCATION_ESP_HMAC:
-            *key_buffer_size = esp_hmac_opaque_size_function(key_type,
-                                     PSA_BYTES_TO_BITS( data_length ) );
+            *key_buffer_size = esp_hmac_opaque_size_function(attributes,
+                                     key_type, data, data_length );
             return( ( *key_buffer_size != 0 ) ?
                     PSA_SUCCESS : PSA_ERROR_NOT_SUPPORTED );
 #endif /* defined(ESP_HMAC_OPAQUE_DRIVER_ENABLED) */

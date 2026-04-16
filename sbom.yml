@@ -1,4 +1,4 @@
-version: 4.0.0
+version: 4.1.0
 cpe: cpe:2.3:a:arm:mbed_tls:{}:*:*:*:*:*:*:*
 supplier: 'Organization: Espressif Systems (Shanghai) CO LTD'
 originator: 'Organization: Trusted Firmware <mbed-tls-security@lists.trustedfirmware.org>'

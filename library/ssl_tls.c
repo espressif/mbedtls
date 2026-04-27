@@ -1269,6 +1269,12 @@ void mbedtls_ssl_session_reset_msg_layer(mbedtls_ssl_context *ssl,
 #if defined(MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH)
     size_t in_buf_len = ssl->in_buf_len;
     size_t out_buf_len = ssl->out_buf_len;
+/* ESP Change: For dynamic buffer feature, the buffer allocation shall be 
+ * handled on-demand basis and hence skip the memset in this API on the buffer pointers 
+ */
+#elif defined(CONFIG_MBEDTLS_DYNAMIC_BUFFER)
+    size_t in_buf_len = 0;
+    size_t out_buf_len = 0;
 #else
     size_t in_buf_len = MBEDTLS_SSL_IN_BUFFER_LEN;
     size_t out_buf_len = MBEDTLS_SSL_OUT_BUFFER_LEN;

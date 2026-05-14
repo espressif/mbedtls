@@ -233,6 +233,11 @@ typedef struct {
     uint8_t key_data[];
 } psa_persistent_key_storage_format;
 
+size_t psa_persistent_key_storage_blob_size(size_t key_data_length)
+{
+    return sizeof(psa_persistent_key_storage_format) + key_data_length;
+}
+
 void psa_format_key_data_for_storage(const uint8_t *data,
                                      const size_t data_length,
                                      const psa_key_attributes_t *attr,

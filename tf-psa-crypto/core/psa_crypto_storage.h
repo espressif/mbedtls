@@ -159,6 +159,21 @@ psa_status_t psa_destroy_persistent_key(const mbedtls_svc_key_id_t key);
 void psa_free_persistent_key_data(uint8_t *key_data, size_t key_data_length);
 
 /**
+ * \brief Return the on-disk size of the PSA persistent key storage blob that
+ *        psa_format_key_data_for_storage() will produce for a given key data
+ *        length.
+ *
+ * Custom PSA ITS backends that synthesize blobs on read (rather than
+ * persisting them through psa_its_set()) can use this to size the output
+ * buffer without knowing the internal storage format layout.
+ *
+ * \param key_data_length  Length of the key_data payload that will be passed
+ *                         to psa_format_key_data_for_storage().
+ * \return Total blob size in bytes (storage header + key_data).
+ */
+size_t psa_persistent_key_storage_blob_size(size_t key_data_length);
+
+/**
  * \brief Formats key data and metadata for persistent storage
  *
  * \param[in] data          Buffer containing the key data.

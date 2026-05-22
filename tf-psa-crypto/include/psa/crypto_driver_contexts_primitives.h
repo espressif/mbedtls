@@ -44,7 +44,7 @@
 #endif
 
 #if defined(ESP_MD5_DRIVER_ENABLED)
-#include "esp_rom_md5.h"
+#include "psa_crypto_driver_esp_md5_contexts.h"
 #endif
 
 #if defined(ESP_AES_DRIVER_ENABLED)
@@ -128,7 +128,7 @@ typedef union {
     esp_sha_hash_operation_t esp_ctx;
 #endif
 #if defined(ESP_MD5_DRIVER_ENABLED)
-    md5_context_t md5_ctx;
+    esp_md5_hash_operation_t md5_ctx;
 #endif
 } psa_driver_hash_context_t;
 

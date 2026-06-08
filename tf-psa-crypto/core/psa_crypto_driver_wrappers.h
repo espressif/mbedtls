@@ -2751,6 +2751,7 @@ static inline psa_status_t psa_driver_wrapper_aead_verify(
 #if defined(PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT)
 #if defined(ESP_AES_DRIVER_ENABLED)
         case ESP_AES_TRANSPARENT_DRIVER_ID:
+            {
                 psa_status_t status = PSA_ERROR_CORRUPTION_DETECTED;
                 uint8_t check_tag[PSA_AEAD_TAG_MAX_SIZE];
                 size_t check_tag_length;
@@ -2767,6 +2768,7 @@ static inline psa_status_t psa_driver_wrapper_aead_verify(
                 mbedtls_platform_zeroize(check_tag, sizeof(check_tag));
 
                 return(status);
+            }
 #endif /* ESP_AES_DRIVER_ENABLED */
 #if defined(PSA_CRYPTO_DRIVER_TEST)
         case MBEDTLS_TEST_TRANSPARENT_DRIVER_ID:

@@ -114,6 +114,7 @@
 #define ESP_HMAC_TRANSPARENT_DRIVER_ID (12)
 #define ESP_HMAC_OPAQUE_DRIVER_ID (13)
 #define SECURE_ELEMENT_OPAQUE_DRIVER_ID (14)
+#define ESP_ECDSA_TRANSPARENT_SIGN_DRIVER_ID (15)
 
 /* END-driver id */
 
@@ -324,6 +325,25 @@ static inline psa_status_t psa_driver_wrapper_sign_hash(
             if( status != PSA_ERROR_NOT_SUPPORTED )
                 return( status );
 #endif /* PSA_CRYPTO_DRIVER_TEST */
+#if defined(ESP_ECDSA_DRIVER_ENABLED) && defined(ESP_ECDSA_TRANSPARENT_SIGN_DRIVER_ENABLED)
+            if( PSA_KEY_TYPE_IS_ECC( psa_get_key_type(attributes) ) &&
+                PSA_ALG_IS_ECDSA(alg) && PSA_ALG_IS_ECDSA( psa_get_key_algorithm(attributes) ) &&
+                PSA_KEY_TYPE_ECC_GET_FAMILY(psa_get_key_type(attributes)) == PSA_ECC_FAMILY_SECP_R1)
+            {
+                status = esp_ecdsa_transparent_sign_hash( attributes,
+                                                          key_buffer,
+                                                          key_buffer_size,
+                                                          alg,
+                                                          hash,
+                                                          hash_length,
+                                                          signature,
+                                                          signature_size,
+                                                          signature_length );
+                /* Declared with fallback == true */
+                if( status != PSA_ERROR_NOT_SUPPORTED )
+                    return( status );
+            }
+#endif /* defined(ESP_ECDSA_DRIVER_ENABLED) && defined(ESP_ECDSA_TRANSPARENT_SIGN_DRIVER_ENABLED) */
 #if defined (MBEDTLS_PSA_P256M_DRIVER_ENABLED)
             if( PSA_KEY_TYPE_IS_ECC( psa_get_key_type(attributes) ) &&
                 PSA_ALG_IS_RANDOMIZED_ECDSA(alg) &&
@@ -623,6 +643,23 @@ static inline psa_status_t psa_driver_wrapper_sign_hash_start(
             /* Declared with fallback == true */
 
 #endif /* PSA_CRYPTO_DRIVER_TEST */
+#if defined(ESP_ECDSA_DRIVER_ENABLED) && defined(ESP_ECDSA_TRANSPARENT_SIGN_DRIVER_ENABLED)
+            if( PSA_KEY_TYPE_IS_ECC( psa_get_key_type(attributes) ) &&
+                PSA_ALG_IS_ECDSA(alg) && PSA_ALG_IS_ECDSA( psa_get_key_algorithm(attributes) ) &&
+                PSA_KEY_TYPE_ECC_GET_FAMILY(psa_get_key_type(attributes)) == PSA_ECC_FAMILY_SECP_R1)
+            {
+                status = esp_ecdsa_transparent_sign_hash_start( &operation->ctx.esp_ecdsa_transparent_sign_hash_ctx,
+                                                                attributes,
+                                                                key_buffer, key_buffer_size,
+                                                                alg, hash, hash_length );
+                if (status == PSA_SUCCESS) {
+                    operation->id = ESP_ECDSA_TRANSPARENT_SIGN_DRIVER_ID;
+                }
+                /* Declared with fallback == true */
+                if( status != PSA_ERROR_NOT_SUPPORTED )
+                    return( status );
+            }
+#endif /* defined(ESP_ECDSA_DRIVER_ENABLED) && defined(ESP_ECDSA_TRANSPARENT_SIGN_DRIVER_ENABLED) */
 #endif /* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */
 
             /* Fell through, meaning no accelerator supports this operation */
@@ -703,6 +740,12 @@ static inline psa_status_t psa_driver_wrapper_sign_hash_complete(
                                                         signature, signature_size,
                                                         signature_length );
 #endif /* defined(ESP_ECDSA_DRIVER_ENABLED) && defined(ESP_ECDSA_SIGN_DRIVER_ENABLED) */
+#if defined(ESP_ECDSA_DRIVER_ENABLED) && defined(ESP_ECDSA_TRANSPARENT_SIGN_DRIVER_ENABLED)
+        case ESP_ECDSA_TRANSPARENT_SIGN_DRIVER_ID:
+            return esp_ecdsa_transparent_sign_hash_complete( &operation->ctx.esp_ecdsa_transparent_sign_hash_ctx,
+                                                             signature, signature_size,
+                                                             signature_length );
+#endif /* defined(ESP_ECDSA_DRIVER_ENABLED) && defined(ESP_ECDSA_TRANSPARENT_SIGN_DRIVER_ENABLED) */
 #if defined(ESP_RSA_DS_DRIVER_ENABLED)
         case ESP_RSA_DS_OPAQUE_DRIVER_ID:
             return esp_rsa_ds_opaque_sign_hash_complete( &operation->ctx.esp_rsa_ds_opaque_sign_hash_ctx,
@@ -736,6 +779,10 @@ static inline psa_status_t psa_driver_wrapper_sign_hash_abort(
         case ESP_ECDSA_OPAQUE_DRIVER_ID:
             return esp_ecdsa_opaque_sign_hash_abort( &operation->ctx.esp_ecdsa_opaque_sign_hash_ctx );
 #endif /* defined(ESP_ECDSA_DRIVER_ENABLED) && defined(ESP_ECDSA_SIGN_DRIVER_ENABLED) */
+#if defined(ESP_ECDSA_DRIVER_ENABLED) && defined(ESP_ECDSA_TRANSPARENT_SIGN_DRIVER_ENABLED)
+        case ESP_ECDSA_TRANSPARENT_SIGN_DRIVER_ID:
+            return esp_ecdsa_transparent_sign_hash_abort( &operation->ctx.esp_ecdsa_transparent_sign_hash_ctx );
+#endif /* defined(ESP_ECDSA_DRIVER_ENABLED) && defined(ESP_ECDSA_TRANSPARENT_SIGN_DRIVER_ENABLED) */
 #if defined(ESP_RSA_DS_DRIVER_ENABLED)
         case ESP_RSA_DS_OPAQUE_DRIVER_ID:
             return esp_rsa_ds_opaque_sign_hash_abort( &operation->ctx.esp_rsa_ds_opaque_sign_hash_ctx );
@@ -767,6 +814,10 @@ static inline psa_status_t psa_driver_wrapper_verify_hash_start(
 #if defined(PSA_CRYPTO_DRIVER_TEST)
 
             /* Add test driver tests here */
+
+            /* Declared with fallback == true */
+
+#endif /* PSA_CRYPTO_DRIVER_TEST */
 #if defined(ESP_ECDSA_DRIVER_ENABLED) && defined(ESP_ECDSA_VERIFY_DRIVER_ENABLED)
             if( PSA_KEY_TYPE_IS_ECC( psa_get_key_type(attributes) ) &&
                 PSA_ALG_IS_ECDSA(alg) && PSA_ALG_IS_ECDSA( psa_get_key_algorithm(attributes) ) &&
@@ -780,14 +831,11 @@ static inline psa_status_t psa_driver_wrapper_verify_hash_start(
                 if (status == PSA_SUCCESS) {
                     operation->id = ESP_ECDSA_TRANSPARENT_DRIVER_ID;
                 }
+                /* Declared with fallback == true */
                 if( status != PSA_ERROR_NOT_SUPPORTED )
                     return( status );
             }
 #endif /* defined(ESP_ECDSA_DRIVER_ENABLED) && defined(ESP_ECDSA_VERIFY_DRIVER_ENABLED) */
-
-            /* Declared with fallback == true */
-
-#endif /* PSA_CRYPTO_DRIVER_TEST */
 #endif /* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */
 
             /* Fell through, meaning no accelerator supports this operation */

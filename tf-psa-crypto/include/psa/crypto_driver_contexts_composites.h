@@ -176,6 +176,9 @@ typedef union {
 #if defined(ESP_ECDSA_DRIVER_ENABLED) && defined(ESP_ECDSA_SIGN_DRIVER_ENABLED)
     esp_ecdsa_opaque_sign_hash_operation_t esp_ecdsa_opaque_sign_hash_ctx;
 #endif
+#if defined(ESP_ECDSA_DRIVER_ENABLED) && defined(ESP_ECDSA_TRANSPARENT_SIGN_DRIVER_ENABLED)
+    esp_ecdsa_transparent_sign_hash_operation_t esp_ecdsa_transparent_sign_hash_ctx;
+#endif
 #if defined(ESP_RSA_DS_DRIVER_ENABLED)
     esp_rsa_ds_opaque_sign_hash_operation_t esp_rsa_ds_opaque_sign_hash_ctx;
 #endif

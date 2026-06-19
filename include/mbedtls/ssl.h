@@ -237,6 +237,8 @@
 #define MBEDTLS_SSL_IANA_TLS_GROUP_FFDHE4096     0x0102
 #define MBEDTLS_SSL_IANA_TLS_GROUP_FFDHE6144     0x0103
 #define MBEDTLS_SSL_IANA_TLS_GROUP_FFDHE8192     0x0104
+/** X25519 + ML-KEM-768 hybrid (draft-ietf-tls-ecdhe-mlkem) */
+#define MBEDTLS_SSL_IANA_TLS_GROUP_X25519MLKEM768 0x11EC
 
 /*
  * TLS 1.3 Key Exchange Modes
@@ -499,6 +501,9 @@
 /* EdDSA algorithms */
 #define MBEDTLS_TLS1_3_SIG_ED25519 0x0807
 #define MBEDTLS_TLS1_3_SIG_ED448 0x0808
+
+/* Pure ML-DSA-65 (FIPS 204 Level 3), per draft-ietf-tls-mldsa. */
+#define MBEDTLS_TLS1_3_SIG_MLDSA65 0x0905
 
 /* RSASSA-PSS algorithms with public key OID RSASSA-PSS  */
 #define MBEDTLS_TLS1_3_SIG_RSA_PSS_PSS_SHA256 0x0809

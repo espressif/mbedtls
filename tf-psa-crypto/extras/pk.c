@@ -116,6 +116,8 @@ const mbedtls_pk_info_t *mbedtls_pk_info_from_type(mbedtls_pk_type_t pk_type)
         case MBEDTLS_PK_ECDSA:
             return &mbedtls_ecdsa_info;
 #endif /* PSA_HAVE_ALG_SOME_ECDSA */
+        case MBEDTLS_PK_MLDSA65:
+            return &mbedtls_mldsa65_info;
         default:
             return NULL;
     }
@@ -1217,6 +1219,13 @@ int mbedtls_pk_verify_ext(mbedtls_pk_sigalg_t type,
 
     if (ctx->pk_info == NULL) {
         return MBEDTLS_ERR_PK_BAD_INPUT_DATA;
+    }
+
+    if (type == MBEDTLS_PK_SIGALG_MLDSA65) {
+        if (mbedtls_pk_get_type(ctx) != MBEDTLS_PK_MLDSA65) {
+            return MBEDTLS_ERR_PK_TYPE_MISMATCH;
+        }
+        return mbedtls_pk_verify(ctx, md_alg, hash, hash_len, sig, sig_len);
     }
 
     if (!mbedtls_pk_can_do(ctx, (mbedtls_pk_type_t) type)) {

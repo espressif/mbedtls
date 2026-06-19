@@ -1473,6 +1473,19 @@ static int ssl_tls13_key_schedule_stage_handshake(mbedtls_ssl_context *ssl)
 
             handshake->xxdh_psa_privkey = MBEDTLS_SVC_KEY_ID_INIT;
 #endif /* PSA_WANT_ALG_ECDH || PSA_WANT_ALG_FFDH */
+#if defined(MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_GROUP_X25519MLKEM768)
+        } else if (mbedtls_ssl_tls13_named_group_is_hybrid_x25519mlkem768(
+                       handshake->offered_group_id)) {
+            shared_secret_len = handshake->xxdh_psa_peerkey_len;
+            shared_secret = mbedtls_calloc(1, shared_secret_len);
+            if (shared_secret == NULL) {
+                return MBEDTLS_ERR_SSL_ALLOC_FAILED;
+            }
+            memcpy(shared_secret, handshake->xxdh_psa_peerkey, shared_secret_len);
+            mbedtls_platform_zeroize(handshake->xxdh_psa_peerkey,
+                                     sizeof(handshake->xxdh_psa_peerkey));
+            handshake->xxdh_psa_peerkey_len = 0;
+#endif /* MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_GROUP_X25519MLKEM768 */
         } else {
             MBEDTLS_SSL_DEBUG_MSG(1, ("Group not supported."));
             return MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE;

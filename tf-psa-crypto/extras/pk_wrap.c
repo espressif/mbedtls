@@ -664,4 +664,36 @@ const mbedtls_pk_info_t mbedtls_rsa_opaque_info = {
 #endif /* MBEDTLS_ECP_RESTARTABLE */
 };
 
+#include "mbedtls/mldsa65_oqs.h"
+
+static int mldsa65_can_do(mbedtls_pk_type_t type)
+{
+    return type == MBEDTLS_PK_MLDSA65;
+}
+
+static int mldsa65_verify_wrap(mbedtls_pk_context *pk, mbedtls_md_type_t md_alg,
+                               const unsigned char *hash, size_t hash_len,
+                               const unsigned char *sig, size_t sig_len)
+{
+    (void) md_alg;
+    /* Verify exactly the byte string provided by the caller.
+     * TLS 1.3 passes the full verify structure; X.509 passes the selected
+     * TBSCertificate/CRL verification input from the X.509 verify path. */
+    return mbedtls_pk_mldsa65_oqs_verify(pk, hash, hash_len, sig, sig_len);
+}
+
+const mbedtls_pk_info_t mbedtls_mldsa65_info = {
+    .type = MBEDTLS_PK_MLDSA65,
+    .name = "MLDSA65",
+    .can_do = mldsa65_can_do,
+    .verify_func = mldsa65_verify_wrap,
+    .sign_func = NULL,
+#if defined(MBEDTLS_ECP_RESTARTABLE)
+    .verify_rs_func = NULL,
+    .sign_rs_func = NULL,
+    .rs_alloc_func = NULL,
+    .rs_free_func = NULL,
+#endif /* MBEDTLS_ECP_RESTARTABLE */
+};
+
 #endif /* MBEDTLS_PK_C */

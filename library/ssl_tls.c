@@ -2392,6 +2392,9 @@ void mbedtls_ssl_conf_sig_algs(mbedtls_ssl_config *conf,
  * about this list.
  */
 static const uint16_t ssl_preset_default_groups[] = {
+#if defined(MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_GROUP_X25519MLKEM768)
+    MBEDTLS_SSL_IANA_TLS_GROUP_X25519MLKEM768,
+#endif
 #if defined(PSA_WANT_ECC_MONTGOMERY_255)
     MBEDTLS_SSL_IANA_TLS_GROUP_X25519,
 #endif
@@ -4552,6 +4555,10 @@ void mbedtls_ssl_handshake_free(mbedtls_ssl_context *ssl)
     }
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_XXDH_PSA_ANY_ENABLED */
 
+#if defined(MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_GROUP_X25519MLKEM768)
+    mbedtls_platform_zeroize(handshake->mlkem_sk, sizeof(handshake->mlkem_sk));
+#endif
+
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3)
     mbedtls_ssl_transform_free(handshake->transform_handshake);
     mbedtls_free(handshake->transform_handshake);
@@ -5323,6 +5330,10 @@ static const uint16_t ssl_preset_default_sig_algs[] = {
 #if defined(PSA_WANT_KEY_TYPE_RSA_KEY_PAIR_BASIC) && defined(PSA_WANT_ALG_SHA_256)
     MBEDTLS_TLS1_3_SIG_RSA_PKCS1_SHA256,
 #endif /* PSA_WANT_KEY_TYPE_RSA_KEY_PAIR_BASIC && PSA_WANT_ALG_SHA_256 */
+
+#if defined(MBEDTLS_SSL_TLS1_3_SIG_MLDSA65)
+    MBEDTLS_TLS1_3_SIG_MLDSA65,
+#endif
 
     MBEDTLS_TLS_SIG_NONE
 };

@@ -160,6 +160,9 @@
 #define MBEDTLS_OID_PKCS5_PBKDF2                MBEDTLS_OID_PKCS5 "\x0c" /**< id-PBKDF2 OBJECT IDENTIFIER ::= {pkcs-5 12} */
 #define MBEDTLS_OID_PKCS5_PBES2                 MBEDTLS_OID_PKCS5 "\x0d" /**< id-PBES2 OBJECT IDENTIFIER ::= {pkcs-5 13} */
 
+/** id-ml-dsa-65 (RFC 9881) */
+#define MBEDTLS_OID_MLDSA65                     MBEDTLS_OID_NIST_ALG "\x03\x12" /**< id-ml-dsa-65 OBJECT IDENTIFIER ::= { joint-iso-itu-t(2) country(16) us(840) organization(1) gov(101) csor(3) nistAlgorithm(4) sigAlgs(3) 18 } */
+
 /*
  * EC key algorithms from RFC 5480
  */

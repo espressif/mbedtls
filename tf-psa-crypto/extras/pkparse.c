@@ -20,6 +20,7 @@
 #include "mbedtls/private/error_common.h"
 #include "mbedtls/private/ecp.h"
 #include "pk_internal.h"
+#include "mbedtls/mldsa65_oqs.h"
 
 #include <string.h>
 
@@ -497,6 +498,12 @@ static int pk_get_pk_alg(unsigned char **p,
         return MBEDTLS_ERR_PK_INVALID_ALG;
     }
 
+    if (*pk_alg == MBEDTLS_PK_MLDSA65 &&
+        ((params->tag != MBEDTLS_ASN1_NULL && params->tag != 0) ||
+         params->len != 0)) {
+        return MBEDTLS_ERR_PK_INVALID_ALG;
+    }
+
     return 0;
 }
 
@@ -574,7 +581,22 @@ int mbedtls_pk_parse_subpubkey(unsigned char **p, const unsigned char *end,
         }
     } else
 #endif /* PSA_WANT_KEY_TYPE_ECC_PUBLIC_KEY */
-    ret = MBEDTLS_ERR_PK_UNKNOWN_PK_ALG;
+    if (pk_alg == MBEDTLS_PK_MLDSA65) {
+        if (len != MBEDTLS_MLDSA65_PUBLIC_KEY_LEN) {
+            ret = MBEDTLS_ERR_PK_INVALID_PUBKEY;
+        } else if (len > MBEDTLS_PK_MAX_PUBKEY_RAW_LEN) {
+            ret = MBEDTLS_ERR_PK_BUFFER_TOO_SMALL;
+        } else {
+            memcpy(pk->pub_raw, *p, len);
+            pk->pub_raw_len = len;
+            pk->bits = len * 8;
+            *p += len;
+            ret = 0;
+        }
+    } else
+    {
+        ret = MBEDTLS_ERR_PK_UNKNOWN_PK_ALG;
+    }
 
     if (ret == 0 && *p != end) {
         ret = MBEDTLS_ERROR_ADD(MBEDTLS_ERR_PK_INVALID_PUBKEY,

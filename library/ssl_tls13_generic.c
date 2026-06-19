@@ -13,6 +13,7 @@
 
 #include "mbedtls/error.h"
 #include "debug_internal.h"
+#include "mbedtls/md.h"
 #include "mbedtls/oid.h"
 #include "mbedtls/platform.h"
 #include "mbedtls/constant_time.h"
@@ -25,6 +26,10 @@
 #include "ssl_debug_helpers.h"
 
 #include "psa/crypto.h"
+
+#if defined(MBEDTLS_SSL_TLS1_3_SIG_MLDSA65)
+#include "mbedtls/mldsa65_oqs.h"
+#endif
 
 #if defined(MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_SOME_EPHEMERAL_ENABLED)
 /* Define a local translating function to save code size by not using too many
@@ -305,9 +310,14 @@ static int ssl_tls13_parse_certificate_verify(mbedtls_ssl_context *ssl,
         goto error;
     }
 
-    hash_alg = mbedtls_md_psa_alg_from_type(md_alg);
-    if (hash_alg == 0) {
-        goto error;
+#if defined(MBEDTLS_SSL_TLS1_3_SIG_MLDSA65)
+    if (sig_alg != MBEDTLS_PK_SIGALG_MLDSA65)
+#endif
+    {
+        hash_alg = mbedtls_md_psa_alg_from_type(md_alg);
+        if (hash_alg == 0) {
+            goto error;
+        }
     }
 
     MBEDTLS_SSL_DEBUG_MSG(3, ("Certificate Verify: Signature algorithm ( %04x )",
@@ -316,6 +326,15 @@ static int ssl_tls13_parse_certificate_verify(mbedtls_ssl_context *ssl,
     /*
      * Check the certificate's key type matches the signature alg
      */
+#if defined(MBEDTLS_SSL_TLS1_3_SIG_MLDSA65)
+    if (sig_alg == MBEDTLS_PK_SIGALG_MLDSA65) {
+        if (mbedtls_pk_get_type(&ssl->session_negotiate->peer_cert->pk) !=
+            MBEDTLS_PK_MLDSA65) {
+            MBEDTLS_SSL_DEBUG_MSG(1, ("signature algorithm doesn't match cert key"));
+            goto error;
+        }
+    } else
+#endif
     if (!mbedtls_pk_can_do_psa(&ssl->session_negotiate->peer_cert->pk,
                                mbedtls_psa_alg_from_pk_sigalg(sig_alg, hash_alg),
                                PSA_KEY_USAGE_VERIFY_HASH)) {
@@ -327,6 +346,22 @@ static int ssl_tls13_parse_certificate_verify(mbedtls_ssl_context *ssl,
     signature_len = MBEDTLS_GET_UINT16_BE(p, 0);
     p += 2;
     MBEDTLS_SSL_CHK_BUF_READ_PTR(p, end, signature_len);
+
+
+#if defined(MBEDTLS_SSL_TLS1_3_SIG_MLDSA65)
+    if (sig_alg == MBEDTLS_PK_SIGALG_MLDSA65) {
+        /* Pure ML-DSA: sign the verify structure, not a hash of it. */
+        ret = mbedtls_pk_mldsa65_oqs_verify(
+            &ssl->session_negotiate->peer_cert->pk,
+            verify_buffer, verify_buffer_len,
+            p, signature_len);
+        if (ret == 0) {
+            return 0;
+        }
+        MBEDTLS_SSL_DEBUG_RET(1, "mbedtls_pk_mldsa65_oqs_verify", ret);
+        goto error;
+    }
+#endif
 
     status = psa_hash_compute(hash_alg,
                               verify_buffer,
@@ -873,6 +908,11 @@ cleanup:
 int mbedtls_ssl_tls13_check_sig_alg_cert_key_match(uint16_t sig_alg,
                                                    mbedtls_pk_context *key)
 {
+#if defined(MBEDTLS_SSL_TLS1_3_SIG_MLDSA65)
+    if (sig_alg == MBEDTLS_TLS1_3_SIG_MLDSA65) {
+        return mbedtls_pk_get_type(key) == MBEDTLS_PK_MLDSA65;
+    }
+#endif
     mbedtls_pk_type_t pk_type = (mbedtls_pk_type_t) mbedtls_ssl_sig_from_pk(key);
     size_t key_size = mbedtls_pk_get_bitlen(key);
 

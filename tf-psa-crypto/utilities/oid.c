@@ -133,6 +133,10 @@ static const oid_pk_alg_t oid_pk_alg[] =
         MBEDTLS_PK_ECKEY_DH,
     },
     {
+        OID_DESCRIPTOR(MBEDTLS_OID_MLDSA65,             "id-ml-dsa-65",     "ML-DSA-65"),
+        MBEDTLS_PK_MLDSA65,
+    },
+    {
         NULL_OID_DESCRIPTOR,
         MBEDTLS_PK_NONE,
     },

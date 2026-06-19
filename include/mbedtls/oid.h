@@ -265,6 +265,12 @@
  *   ecdsa-with-SHA2(3) 4 } */
 #define MBEDTLS_OID_ECDSA_SHA512            MBEDTLS_OID_ANSI_X9_62_SIG_SHA2 "\x04"
 
+/*
+ * id-ml-dsa-65 (RFC 9881): { joint-iso-itu-t(2) country(16) us(840) organization(1) gov(101) csor(3) nistAlgorithm(4) mldsa(3) 18 }
+ * Pure ML-DSA-65 for X.509. Enabled with \c MBEDTLS_SSL_TLS1_3_SIG_MLDSA65.
+ */
+#define MBEDTLS_OID_MLDSA65                 MBEDTLS_OID_NIST_ALG "\x03\x12"
+
 #if defined(MBEDTLS_X509_USE_C)
 /**
  * \brief           Translate an ASN.1 OID into its numeric representation

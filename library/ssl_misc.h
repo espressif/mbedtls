@@ -25,6 +25,7 @@ extern const mbedtls_error_pair_t psa_to_ssl_errors[7];
 
 #include "mbedtls/pk.h"
 #include "ssl_ciphersuites_internal.h"
+#include "ssl_tls13_hybrid_kem.h"
 #include "x509_internal.h"
 
 /* Shorthand for restartable ECC */
@@ -761,6 +762,11 @@ struct mbedtls_ssl_handshake_params {
     unsigned char xxdh_psa_peerkey[PSA_EXPORT_PUBLIC_KEY_MAX_SIZE];
     size_t xxdh_psa_peerkey_len;
 #endif /* MBEDTLS_KEY_EXCHANGE_SOME_XXDH_PSA_ANY_ENABLED */
+
+#if defined(MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_GROUP_X25519MLKEM768)
+    /** ML-KEM-768 secret key (liboqs) between client key share and decapsulation */
+    uint8_t mlkem_sk[MBEDTLS_MLKEM768_SECRET_KEY_LEN];
+#endif
 
 #if defined(MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED)
     psa_pake_operation_t psa_pake_ctx;        /*!< EC J-PAKE key exchange */
@@ -2227,6 +2233,13 @@ static inline int mbedtls_ssl_tls13_named_group_is_ffdh(uint16_t named_group)
            named_group <= MBEDTLS_SSL_IANA_TLS_GROUP_FFDHE8192;
 }
 
+#if defined(MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_GROUP_X25519MLKEM768)
+static inline int mbedtls_ssl_tls13_named_group_is_hybrid_x25519mlkem768(uint16_t named_group)
+{
+    return named_group == MBEDTLS_SSL_IANA_TLS_GROUP_X25519MLKEM768;
+}
+#endif
+
 static inline int mbedtls_ssl_named_group_is_offered(
     const mbedtls_ssl_context *ssl, uint16_t named_group)
 {
@@ -2260,7 +2273,13 @@ static inline int mbedtls_ssl_named_group_is_supported(uint16_t named_group)
         return 1;
     }
 #endif
-#if !defined(PSA_WANT_ALG_ECDH) && !defined(PSA_WANT_ALG_FFDH)
+#if defined(MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_GROUP_X25519MLKEM768)
+    if (mbedtls_ssl_tls13_named_group_is_hybrid_x25519mlkem768(named_group)) {
+        return 1;
+    }
+#endif
+#if !defined(PSA_WANT_ALG_ECDH) && !defined(PSA_WANT_ALG_FFDH) && \
+    !defined(MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_GROUP_X25519MLKEM768)
     (void) named_group;
 #endif
     return 0;
@@ -2333,6 +2352,10 @@ static inline int mbedtls_ssl_tls13_sig_alg_for_cert_verify_is_supported(
             break;
 #endif /* PSA_WANT_ALG_SHA_512 */
 #endif /* PSA_WANT_ALG_RSA_PSS */
+#if defined(MBEDTLS_SSL_TLS1_3_SIG_MLDSA65)
+        case MBEDTLS_TLS1_3_SIG_MLDSA65:
+            break;
+#endif
         default:
             return 0;
     }
@@ -2418,6 +2441,12 @@ static inline int mbedtls_ssl_get_pk_sigalg_and_md_alg_from_sig_alg(
             break;
 #endif /* PSA_WANT_ALG_SHA_512 */
 #endif /* PSA_WANT_ALG_RSA_PSS */
+#if defined(MBEDTLS_SSL_TLS1_3_SIG_MLDSA65)
+        case MBEDTLS_TLS1_3_SIG_MLDSA65:
+            *md_alg = MBEDTLS_MD_NONE;
+            *pk_type = MBEDTLS_PK_MLDSA65;
+            return 0;
+#endif
         default:
             return MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE;
     }

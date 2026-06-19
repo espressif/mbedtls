@@ -232,6 +232,16 @@ static int x509_profile_check_key(const mbedtls_x509_crt_profile *profile,
     }
 #endif /* PSA_WANT_KEY_TYPE_ECC_PUBLIC_KEY */
 
+#if defined(MBEDTLS_SSL_TLS1_3_SIG_MLDSA65) && \
+    defined(MBEDTLS_DECLARE_PRIVATE_IDENTIFIERS)
+    if (pk_alg == MBEDTLS_PK_MLDSA65) {
+        if (mbedtls_pk_get_bitlen(pk) > 0) {
+            return 0;
+        }
+        return -1;
+    }
+#endif
+
     return -1;
 }
 
@@ -2018,6 +2028,8 @@ static int x509_crt_verifycrl(mbedtls_x509_crt *crt, mbedtls_x509_crt *ca,
     unsigned char hash[MBEDTLS_MD_MAX_SIZE];
     psa_algorithm_t psa_algorithm;
     size_t hash_length;
+    const unsigned char *verify_input;
+    size_t verify_input_len;
 
     if (ca == NULL) {
         return flags;
@@ -2050,16 +2062,23 @@ static int x509_crt_verifycrl(mbedtls_x509_crt *crt, mbedtls_x509_crt *ca,
             flags |= MBEDTLS_X509_BADCRL_BAD_PK;
         }
 
-        psa_algorithm = mbedtls_md_psa_alg_from_type(crl_list->sig_md);
-        if (psa_hash_compute(psa_algorithm,
-                             crl_list->tbs.p,
-                             crl_list->tbs.len,
-                             hash,
-                             sizeof(hash),
-                             &hash_length) != PSA_SUCCESS) {
-            /* Note: this can't happen except after an internal error */
-            flags |= MBEDTLS_X509_BADCRL_NOT_TRUSTED;
-            break;
+        if (crl_list->sig_pk == MBEDTLS_PK_SIGALG_MLDSA65) {
+            verify_input = crl_list->tbs.p;
+            verify_input_len = crl_list->tbs.len;
+        } else {
+            psa_algorithm = mbedtls_md_psa_alg_from_type(crl_list->sig_md);
+            if (psa_hash_compute(psa_algorithm,
+                                 crl_list->tbs.p,
+                                 crl_list->tbs.len,
+                                 hash,
+                                 sizeof(hash),
+                                 &hash_length) != PSA_SUCCESS) {
+                /* Note: this can't happen except after an internal error */
+                flags |= MBEDTLS_X509_BADCRL_NOT_TRUSTED;
+                break;
+            }
+            verify_input = hash;
+            verify_input_len = hash_length;
         }
 
         if (x509_profile_check_key(profile, &ca->pk) != 0) {
@@ -2067,7 +2086,7 @@ static int x509_crt_verifycrl(mbedtls_x509_crt *crt, mbedtls_x509_crt *ca,
         }
 
         if (mbedtls_pk_verify_ext(crl_list->sig_pk, &ca->pk,
-                                  crl_list->sig_md, hash, hash_length,
+                                  crl_list->sig_md, verify_input, verify_input_len,
                                   crl_list->sig.p, crl_list->sig.len) != 0) {
             flags |= MBEDTLS_X509_BADCRL_NOT_TRUSTED;
             break;
@@ -2112,30 +2131,42 @@ static int x509_crt_check_signature(const mbedtls_x509_crt *child,
 {
     size_t hash_len;
     unsigned char hash[MBEDTLS_MD_MAX_SIZE];
-    psa_algorithm_t hash_alg = mbedtls_md_psa_alg_from_type(child->sig_md);
+    psa_algorithm_t hash_alg;
     psa_status_t status = PSA_ERROR_CORRUPTION_DETECTED;
+    const unsigned char *verify_input;
+    size_t verify_input_len;
 
-    /* Skip expensive computation on obvious mismatch */
-    if (!mbedtls_pk_can_do_psa(&parent->pk,
-                               mbedtls_psa_alg_from_pk_sigalg(child->sig_pk, hash_alg),
-                               PSA_KEY_USAGE_VERIFY_HASH)) {
-        return -1;
-    }
+    if (child->sig_pk == MBEDTLS_PK_SIGALG_MLDSA65) {
+        /* Pure ML-DSA: verify over the raw TBS, no pre-hash. */
+        verify_input = child->tbs.p;
+        verify_input_len = child->tbs.len;
+    } else {
+        hash_alg = mbedtls_md_psa_alg_from_type(child->sig_md);
 
-    status = psa_hash_compute(hash_alg,
-                              child->tbs.p,
-                              child->tbs.len,
-                              hash,
-                              sizeof(hash),
-                              &hash_len);
-    if (status != PSA_SUCCESS) {
-        return MBEDTLS_ERR_PLATFORM_HW_ACCEL_FAILED;
+        /* Skip expensive computation on obvious mismatch */
+        if (!mbedtls_pk_can_do_psa(&parent->pk,
+                                   mbedtls_psa_alg_from_pk_sigalg(child->sig_pk, hash_alg),
+                                   PSA_KEY_USAGE_VERIFY_HASH)) {
+            return -1;
+        }
+
+        status = psa_hash_compute(hash_alg,
+                                  child->tbs.p,
+                                  child->tbs.len,
+                                  hash,
+                                  sizeof(hash),
+                                  &hash_len);
+        if (status != PSA_SUCCESS) {
+            return MBEDTLS_ERR_PLATFORM_HW_ACCEL_FAILED;
+        }
+        verify_input = hash;
+        verify_input_len = hash_len;
     }
 
 #if defined(MBEDTLS_ECP_RESTARTABLE)
     if (rs_ctx != NULL && child->sig_pk == MBEDTLS_PK_SIGALG_ECDSA) {
         return mbedtls_pk_verify_restartable(&parent->pk,
-                                             child->sig_md, hash, hash_len,
+                                             child->sig_md, verify_input, verify_input_len,
                                              child->sig.p, child->sig.len, &rs_ctx->pk);
     }
 #else
@@ -2143,7 +2174,7 @@ static int x509_crt_check_signature(const mbedtls_x509_crt *child,
 #endif
 
     return mbedtls_pk_verify_ext(child->sig_pk, &parent->pk,
-                                 child->sig_md, hash, hash_len,
+                                 child->sig_md, verify_input, verify_input_len,
                                  child->sig.p, child->sig.len);
 }
 

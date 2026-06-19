@@ -797,6 +797,28 @@
 #define MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_EPHEMERAL_ENABLED
 
 /**
+ * \def MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_GROUP_X25519MLKEM768
+ *
+ * Enable support for X25519MLKEM768 hybrid post-quantum key exchange
+ * in TLS 1.3. Requires liboqs to be linked.
+ */
+#define MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_GROUP_X25519MLKEM768
+
+/**
+ * \def MBEDTLS_SSL_TLS1_3_SIG_MLDSA65
+ *
+ * Enable pure ML-DSA-65 signatures (TLS \c SignatureScheme \c 0x0905,
+ * X.509 OID from RFC 9881 id-ml-dsa-65) for TLS 1.3 and X.509. Verification
+ * uses liboqs (OQS_SIG_alg_ml_dsa_65). TLS CertificateVerify uses pure ML-DSA
+ * (message is the verify structure, not a pre-hash).
+ *
+ * Requires: \c MBEDTLS_SSL_PROTO_TLS1_3, X.509, and liboqs.
+ *
+ * Comment out to omit ML-DSA-65 signature support from the build.
+ */
+#define MBEDTLS_SSL_TLS1_3_SIG_MLDSA65
+
+/**
  * \def MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_ENABLED
  *
  * Enable TLS 1.3 PSK key exchange mode.

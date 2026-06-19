@@ -472,6 +472,13 @@ static const oid_sig_alg_t oid_sig_alg[] =
         MBEDTLS_MD_NONE,     MBEDTLS_PK_SIGALG_RSA_PSS,
     },
 #endif /* PSA_WANT_KEY_TYPE_RSA_KEY_PAIR_BASIC */
+#if defined(MBEDTLS_SSL_TLS1_3_SIG_MLDSA65) && defined(PSA_WANT_ALG_SHA_512)
+    {
+        OID_DESCRIPTOR(MBEDTLS_OID_MLDSA65, "id-ml-dsa-65", "ML-DSA-65"),
+        /* TBSCertificate is digested with SHA-512 before ML-DSA verify (X.509). */
+        MBEDTLS_MD_SHA512,   MBEDTLS_PK_SIGALG_MLDSA65,
+    },
+#endif
     {
         NULL_OID_DESCRIPTOR,
         MBEDTLS_MD_NONE, MBEDTLS_PK_SIGALG_NONE,

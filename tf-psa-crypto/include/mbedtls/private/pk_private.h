@@ -26,6 +26,7 @@ typedef enum {
     MBEDTLS_PK_ECKEY,
     MBEDTLS_PK_ECKEY_DH,
     MBEDTLS_PK_OPAQUE,
+    MBEDTLS_PK_MLDSA65 = 7,
 } mbedtls_pk_type_t;
 
 /**

@@ -51,6 +51,8 @@ typedef enum {
     MBEDTLS_PK_SIGALG_RSA_PKCS1V15, // PSA_ALG_RSA_PKCS1V15_SIGN
     MBEDTLS_PK_SIGALG_RSA_PSS,      // PSA_ALG_RSA_PSS_ANY_SALT
     MBEDTLS_PK_SIGALG_ECDSA,        // MBEDTLS_PK_ALG_ECDSA
+    /** ML-DSA-65 (FIPS 204, RFC 9881); must match \c MBEDTLS_PK_MLDSA65 */
+    MBEDTLS_PK_SIGALG_MLDSA65 = 7,
 } mbedtls_pk_sigalg_t;
 
 /**
@@ -99,6 +101,20 @@ typedef struct mbedtls_pk_info_t mbedtls_pk_info_t;
 #undef MBEDTLS_PK_MAX_PUBKEY_RAW_LEN
 #define MBEDTLS_PK_MAX_PUBKEY_RAW_LEN MBEDTLS_PK_MAX_RSA_PUBKEY_RAW_LEN
 #endif
+
+/* PQC pubkey headroom, only when ML-DSA-65 is enabled since pub_raw is inline in every mbedtls_pk_context and some live on the stack; 1952 is the FIPS 204 raw key length pkparse.c copies in, spelled out because mldsa65_oqs.h includes this header. */
+#if defined(MBEDTLS_SSL_TLS1_3_SIG_MLDSA65)
+#define MBEDTLS_PK_PQC_MAX_PUBKEY_RAW_LEN 1952
+#if MBEDTLS_PK_PQC_MAX_PUBKEY_RAW_LEN > MBEDTLS_PK_MAX_PUBKEY_RAW_LEN
+#undef MBEDTLS_PK_MAX_PUBKEY_RAW_LEN
+#define MBEDTLS_PK_MAX_PUBKEY_RAW_LEN MBEDTLS_PK_PQC_MAX_PUBKEY_RAW_LEN
+#endif
+#endif /* MBEDTLS_SSL_TLS1_3_SIG_MLDSA65 */
+
+typedef enum {
+    MBEDTLS_PK_RSA_PKCS_V15 = 0,
+    MBEDTLS_PK_RSA_PKCS_V21,
+} mbedtls_pk_rsa_padding_t;
 
 /**
  * \brief           Public key container

@@ -87,6 +87,8 @@ extern const mbedtls_pk_info_t mbedtls_eckeydh_info;
 extern const mbedtls_pk_info_t mbedtls_ecdsa_info;
 #endif
 
+extern const mbedtls_pk_info_t mbedtls_mldsa65_info;
+
 extern const mbedtls_pk_info_t mbedtls_ecdsa_opaque_info;
 extern const mbedtls_pk_info_t mbedtls_rsa_opaque_info;
 

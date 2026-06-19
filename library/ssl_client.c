@@ -265,6 +265,11 @@ static int ssl_write_supported_groups_ext(mbedtls_ssl_context *ssl,
                 propose_group = 1;
             }
 #endif
+#if defined(MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_GROUP_X25519MLKEM768)
+            if (mbedtls_ssl_tls13_named_group_is_hybrid_x25519mlkem768(*group_list)) {
+                propose_group = 1;
+            }
+#endif
         }
 #endif /* MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_SOME_EPHEMERAL_ENABLED */
 

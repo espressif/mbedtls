@@ -20,6 +20,10 @@
 #include "ssl_debug_helpers.h"
 #include "mbedtls/psa_util.h"
 
+#if defined(MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_GROUP_X25519MLKEM768)
+#include "ssl_tls13_hybrid_kem.h"
+#endif
+
 #if defined(MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_SOME_EPHEMERAL_ENABLED)
 /* Define a local translating function to save code size by not using too many
  * arguments in each translating place. */
@@ -180,6 +184,24 @@ static int ssl_tls13_reset_key_share(mbedtls_ssl_context *ssl)
     }
 
 #if defined(MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_SOME_EPHEMERAL_ENABLED)
+#if defined(MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_GROUP_X25519MLKEM768)
+    if (mbedtls_ssl_tls13_named_group_is_hybrid_x25519mlkem768(group_id)) {
+        int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+        psa_status_t status = PSA_ERROR_CORRUPTION_DETECTED;
+
+        status = psa_destroy_key(ssl->handshake->xxdh_psa_privkey);
+        if (status != PSA_SUCCESS) {
+            ret = PSA_TO_MBEDTLS_ERR(status);
+            MBEDTLS_SSL_DEBUG_RET(1, "psa_destroy_key", ret);
+            return ret;
+        }
+
+        ssl->handshake->xxdh_psa_privkey = MBEDTLS_SVC_KEY_ID_INIT;
+        mbedtls_platform_zeroize(ssl->handshake->mlkem_sk,
+                                 sizeof(ssl->handshake->mlkem_sk));
+        return 0;
+    } else
+#endif /* MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_GROUP_X25519MLKEM768 */
     if (mbedtls_ssl_tls13_named_group_is_ecdhe(group_id) ||
         mbedtls_ssl_tls13_named_group_is_ffdh(group_id)) {
         int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
@@ -223,6 +245,12 @@ static int ssl_tls13_get_default_group_id(mbedtls_ssl_context *ssl,
     }
 
     for (; *group_list != 0; group_list++) {
+#if defined(MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_GROUP_X25519MLKEM768)
+        if (mbedtls_ssl_tls13_named_group_is_hybrid_x25519mlkem768(*group_list)) {
+            *group_id = *group_list;
+            return 0;
+        }
+#endif
 #if defined(PSA_WANT_ALG_ECDH)
         if ((mbedtls_ssl_get_psa_curve_info_from_tls_id(
                  *group_list, NULL, NULL) == PSA_SUCCESS) &&
@@ -286,7 +314,11 @@ static int ssl_tls13_write_key_share_ext(mbedtls_ssl_context *ssl,
     /* HRR could already have requested something else. */
     group_id = ssl->handshake->offered_group_id;
     if (!mbedtls_ssl_tls13_named_group_is_ecdhe(group_id) &&
-        !mbedtls_ssl_tls13_named_group_is_ffdh(group_id)) {
+        !mbedtls_ssl_tls13_named_group_is_ffdh(group_id)
+#if defined(MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_GROUP_X25519MLKEM768)
+        && !mbedtls_ssl_tls13_named_group_is_hybrid_x25519mlkem768(group_id)
+#endif
+        ) {
         MBEDTLS_SSL_PROC_CHK(ssl_tls13_get_default_group_id(ssl,
                                                             &group_id));
     }
@@ -300,6 +332,25 @@ static int ssl_tls13_write_key_share_ext(mbedtls_ssl_context *ssl,
      * only one key share entry is allowed.
      */
     client_shares = p;
+#if defined(MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_GROUP_X25519MLKEM768)
+    if (mbedtls_ssl_tls13_named_group_is_hybrid_x25519mlkem768(group_id)) {
+        unsigned char *group = p;
+        size_t key_exchange_len = 0;
+
+        MBEDTLS_SSL_CHK_BUF_PTR(p, end, 4);
+        p += 4;
+        ret = mbedtls_ssl_tls13_hybrid_x25519mlkem768_write_client_share(
+            ssl, p, end, &key_exchange_len);
+        p += key_exchange_len;
+        if (ret != 0) {
+            MBEDTLS_SSL_DEBUG_MSG(1, ("client hello: failed hybrid X25519MLKEM768 key share"));
+            return ret;
+        }
+
+        MBEDTLS_PUT_UINT16_BE(group_id, group, 0);
+        MBEDTLS_PUT_UINT16_BE(key_exchange_len, group, 2);
+    } else
+#endif /* MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_GROUP_X25519MLKEM768 */
 #if defined(PSA_WANT_ALG_ECDH) || defined(PSA_WANT_ALG_FFDH)
     if (mbedtls_ssl_tls13_named_group_is_ecdhe(group_id) ||
         mbedtls_ssl_tls13_named_group_is_ffdh(group_id)) {
@@ -407,6 +458,12 @@ static int ssl_tls13_parse_hrr_key_share_ext(mbedtls_ssl_context *ssl,
         if (*group_list != selected_group) {
             continue;
         }
+#if defined(MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_GROUP_X25519MLKEM768)
+        if (mbedtls_ssl_tls13_named_group_is_hybrid_x25519mlkem768(*group_list)) {
+            found = 1;
+            break;
+        }
+#endif
 #if defined(PSA_WANT_ALG_ECDH)
         if (mbedtls_ssl_tls13_named_group_is_ecdhe(*group_list)) {
             if (mbedtls_ssl_get_psa_curve_info_from_tls_id(
@@ -494,6 +551,17 @@ static int ssl_tls13_parse_key_share_ext(mbedtls_ssl_context *ssl,
     }
 
 #if defined(MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_SOME_EPHEMERAL_ENABLED)
+#if defined(MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_GROUP_X25519MLKEM768)
+    if (mbedtls_ssl_tls13_named_group_is_hybrid_x25519mlkem768(group)) {
+        MBEDTLS_SSL_DEBUG_MSG(2,
+                              ("DHE group name: %s", mbedtls_ssl_named_group_to_str(group)));
+        ret = mbedtls_ssl_tls13_hybrid_x25519mlkem768_read_server_share(
+            ssl, p, end - p);
+        if (ret != 0) {
+            return ret;
+        }
+    } else
+#endif /* MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_GROUP_X25519MLKEM768 */
     if (mbedtls_ssl_tls13_named_group_is_ecdhe(group) ||
         mbedtls_ssl_tls13_named_group_is_ffdh(group)) {
         MBEDTLS_SSL_DEBUG_MSG(2,

@@ -1,5 +1,7 @@
 version: 1.1.0
-cpe: cpe:2.3:a:arm:tf-psa-crypto:{}:*:*:*:*:*:*:*
+cpe:
+  - cpe:2.3:a:arm:tf-psa-crypto:{}:*:*:*:*:*:*:*
+  - cpe:2.3:a:trustedfirmware:tf-psa-crypto:{}:*:*:*:*:*:*:*
 supplier: 'Organization: Espressif Systems (Shanghai) CO LTD'
 originator: 'Organization: Trusted Firmware <mbed-tls-security@lists.trustedfirmware.org>'
 description: An implementation of the PSA Cryptography API maintained under the Mbed TLS project.

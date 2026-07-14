@@ -2085,6 +2085,90 @@ int mbedtls_mpi_inv_mod(mbedtls_mpi *X, const mbedtls_mpi *A, const mbedtls_mpi 
  *   value of nbits.
  */
 static const mbedtls_mpi_sint small_primes_limit = 997;
+
+#if defined(MBEDTLS_MPI_PRIME_SIEVE_VARIABLE_TIME)
+/* Use the variable-time trial-division small-factor test from mbedtls 3.6.6
+ * instead of the constant-time GCD against the small-primes product.
+ *
+ * The constant-time GCD always runs (A_limbs + N_limbs) * biL iterations of
+ * full-width limb operations and is executed for every prime candidate
+ * (hundreds per generated prime), making RSA key generation an order of
+ * magnitude slower on 32-bit MCUs. It also runs entirely in software, so on
+ * targets where modular exponentiation is offloaded to hardware the CPU is
+ * kept busy for seconds without yielding, starving the idle task.
+ *
+ * The timing side channel closed upstream (variable-latency division leaking
+ * candidate-dependent information) requires an attacker able to observe the
+ * timing of individual operations during key generation, which is outside
+ * the threat model of devices that run no untrusted co-resident code.
+ */
+
+/* Gaps between primes, starting at 3. https://oeis.org/A001223 */
+static const unsigned char small_prime_gaps[] = {
+    2, 2, 4, 2, 4, 2, 4, 6,
+    2, 6, 4, 2, 4, 6, 6, 2,
+    6, 4, 2, 6, 4, 6, 8, 4,
+    2, 4, 2, 4, 14, 4, 6, 2,
+    10, 2, 6, 6, 4, 6, 6, 2,
+    10, 2, 4, 2, 12, 12, 4, 2,
+    4, 6, 2, 10, 6, 6, 6, 2,
+    6, 4, 2, 10, 14, 4, 2, 4,
+    14, 6, 10, 2, 4, 6, 8, 6,
+    6, 4, 6, 8, 4, 8, 10, 2,
+    10, 2, 6, 4, 6, 8, 4, 2,
+    4, 12, 8, 4, 8, 4, 6, 12,
+    2, 18, 6, 10, 6, 6, 2, 6,
+    10, 6, 6, 2, 6, 6, 4, 2,
+    12, 10, 2, 4, 6, 6, 2, 12,
+    4, 6, 8, 10, 8, 10, 8, 6,
+    6, 4, 8, 6, 4, 8, 4, 14,
+    10, 12, 2, 10, 2, 4, 2, 10,
+    14, 4, 2, 4, 14, 4, 2, 4,
+    20, 4, 8, 10, 8, 4, 6, 6,
+    14, 4, 6, 6, 8, 6, /*reaches 997*/
+    0 /* the last entry is effectively unused */
+};
+
+/*
+ * Small divisors test (X must be positive)
+ *
+ * Return values:
+ * 0: no small factor (possible prime, more tests needed)
+ * MBEDTLS_ERR_MPI_NOT_ACCEPTABLE: certain non-prime
+ * MBEDTLS_ERR_MPI_BAD_INPUT_DATA: input too small
+ * other negative: error
+ */
+static int mpi_check_small_factors(const mbedtls_mpi *X)
+{
+    int ret = 0;
+    size_t i;
+    mbedtls_mpi_uint r;
+    unsigned p = 3; /* The first odd prime */
+
+    /* Same input contract as the constant-time implementation below:
+     * inputs no larger than the largest tested prime are rejected. */
+    if (mbedtls_mpi_cmp_int(X, small_primes_limit) <= 0) {
+        return MBEDTLS_ERR_MPI_BAD_INPUT_DATA;
+    }
+
+    if ((X->p[0] & 1) == 0) {
+        return MBEDTLS_ERR_MPI_NOT_ACCEPTABLE;
+    }
+
+    /* X > small_primes_limit, so any zero remainder proves X composite. */
+    for (i = 0; i < sizeof(small_prime_gaps); p += small_prime_gaps[i], i++) {
+        MBEDTLS_MPI_CHK(mbedtls_mpi_mod_int(&r, X, p));
+        if (r == 0) {
+            return MBEDTLS_ERR_MPI_NOT_ACCEPTABLE;
+        }
+    }
+
+cleanup:
+    return ret;
+}
+
+#else /* MBEDTLS_MPI_PRIME_SIEVE_VARIABLE_TIME */
+
 /* Product of small primes up to small_primes_limit included */
 static const mbedtls_mpi_uint small_primes_product_limbs[] = {
     MBEDTLS_BYTES_TO_T_UINT_8(0x4b, 0x13, 0x6a, 0x97, 0xbb, 0xd0, 0xdf, 0x95),
@@ -2160,6 +2244,8 @@ cleanup:
     mbedtls_mpi_free(&g);
     return ret;
 }
+
+#endif /* MBEDTLS_MPI_PRIME_SIEVE_VARIABLE_TIME */
 
 /*
  * Miller-Rabin pseudo-primality test  (HAC 4.24)

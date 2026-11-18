@@ -1,0 +1,320 @@
+# components-build-system.sh
+#
+# Copyright The Mbed TLS Contributors
+# SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
+
+# This file contains test components that are executed by all.sh
+
+################################################################
+#### Build System Testing
+################################################################
+
+component_test_tf_psa_crypto_shared () {
+    msg "build/test: shared libraries" # ~ 2min
+    # We're not building in the OUT_OF_SOURCE_DIR directory in this case
+    # because we want "tfpsacrypto_dlopen" program to be accessible as
+    # "<tf-psa-crypto-root>/programs/test/tfpsacrypto_dlopen"
+    # in dlopen_demo.sh below.
+    cmake -DUSE_SHARED_TF_PSA_CRYPTO_LIBRARY=ON "$TF_PSA_CRYPTO_ROOT_DIR"
+    make
+    ldd programs/test/benchmark | grep libtfpsacrypto
+    make test
+    $FRAMEWORK/tests/programs/dlopen_demo.sh
+}
+
+component_test_tf_psa_crypto_out_of_source () {
+    msg "build: cmake tf-psa-crypto 'out-of-source' build"
+    cd $OUT_OF_SOURCE_DIR
+    # Note: Explicitly generate files as these are turned off in releases
+    cmake -D CMAKE_BUILD_TYPE:String=Check -D GEN_FILES=ON "$TF_PSA_CRYPTO_ROOT_DIR"
+    make
+    msg "test: cmake tf-psa-crypto 'out-of-source' build"
+    make test
+}
+
+component_test_tf_psa_crypto_as_subdirectory () {
+    msg "build: cmake 'as-subdirectory' build"
+    cd programs/test/cmake_subproject
+    # Note: Explicitly generate files as these are turned off in releases
+    cmake -D GEN_FILES=ON .
+    make
+    ./cmake_subproject
+}
+
+component_test_tf_psa_crypto_as_package () {
+    msg "build: cmake 'as-package' build"
+    root_dir="$(pwd)"
+    cd programs/test/cmake_package
+    build_variant_dir="$(pwd)"
+    cmake .
+    make
+    ./cmake_package
+    if [[ "$OSTYPE" == linux* ]]; then
+        PKG_CONFIG_PATH="${build_variant_dir}/tf-psa-crypto/pkgconfig" \
+        ${root_dir}/framework/scripts/pkgconfig.sh \
+        tfpsacrypto
+        # This is the EXPECTED package name. Renaming it could break consumers
+        # of pkg-config, consider carefully.
+    fi
+}
+
+component_test_tf_psa_crypto_cmake_as_package_install () {
+    msg "build: cmake 'as-installed-package' build"
+    cd programs/test/cmake_package_install
+    # Note: Explicitly generate files as these are turned off in releases
+    cmake .
+    make
+    ./cmake_package_install
+}
+
+component_tf_psa_crypto_build_custom_config_file () {
+    # Make a copy of config file
+    cp "$CRYPTO_CONFIG_H" include/psa/crypto_config_default.h
+
+    # Build once to get the generated files (for which need an intact config file)
+    msg "build: cmake out-of-source with default config file"
+    cd "$OUT_OF_SOURCE_DIR"
+    cmake "$TF_PSA_CRYPTO_ROOT_DIR"
+    make
+
+    msg "build: cmake out-of-source with -DMBEDTLS_CONFIG_FILE"
+    cd "$TF_PSA_CRYPTO_ROOT_DIR"
+    cp "$CRYPTO_CONFIG_H" "$OUT_OF_SOURCE_DIR/crypto_config_custom.h"
+    cd "$OUT_OF_SOURCE_DIR"
+    # Force a build failure if the default crypto_config.h header file is included
+    # in the build instead of the one we pass to CMake on the command line.
+    echo '#error "cmake -DMBEDTLS_CONFIG_FILE is not working."' > "$TF_PSA_CRYPTO_ROOT_DIR/$CRYPTO_CONFIG_H"
+    cmake -DGEN_FILES=OFF -DTF_PSA_CRYPTO_CONFIG_FILE=crypto_config_custom.h "$TF_PSA_CRYPTO_ROOT_DIR"
+    make
+
+    msg "build: cmake out-of-source with -DTF_PSA_CRYPTO_CONFIG_FILE + -DTF_PSA_CRYPTO_USER_CONFIG_FILE"
+    # In the user config, disable one feature (for simplicity, pick a feature
+    # that nothing else depends on).
+    echo '#undef MBEDTLS_NIST_KW_C' >crypto_config_user.h
+    # Before rebuilding the library let's verify that the feature was present in the previous build.
+    grep -q mbedtls_nist_kw_wrap core/libtfpsacrypto.a
+    cmake -DGEN_FILES=OFF -DTF_PSA_CRYPTO_CONFIG_FILE=crypto_config_custom.h \
+            -DTF_PSA_CRYPTO_USER_CONFIG_FILE=crypto_config_user.h "$TF_PSA_CRYPTO_ROOT_DIR"
+    make
+    # Verify that MBEDTLS_NIST_KW_C was really disabled, i.e. crypto_config_user.h was included
+    # correctly in the build.
+    not grep -q mbedtls_nist_kw_wrap core/libtfpsacrypto.a
+
+    cd "$TF_PSA_CRYPTO_ROOT_DIR"
+    rm -rf "$OUT_OF_SOURCE_DIR"
+
+    # Now repeat the test for an in-tree build:
+
+    # Restore config for the in-tree test
+    cp include/psa/crypto_config_default.h "$CRYPTO_CONFIG_H"
+
+    # Build once to get the generated files (for which need an intact config)
+    msg "build: cmake in-tree with default config file"
+    cmake .
+    make
+
+    msg "build: cmake in-tree with -DTF_PSA_CRYPTO_CONFIG_FILE"
+    cp include/psa/crypto_config.h crypto_config_custom.h
+
+    echo '#error "cmake -DMBEDTLS_CONFIG_FILE is not working."' > "$TF_PSA_CRYPTO_ROOT_DIR/$CRYPTO_CONFIG_H"
+    cmake -DGEN_FILES=OFF -DTF_PSA_CRYPTO_CONFIG_FILE=crypto_config_custom.h .
+    make
+
+    msg "build: cmake in-tree with -DTF_PSA_CRYPTO_CONFIG_FILE + -DTF_PSA_CRYPTO_USER_CONFIG_FILE"
+    # In the user config, disable one feature (for simplicity, pick a feature
+    # that nothing else depends on).
+    echo '#undef MBEDTLS_NIST_KW_C' >crypto_config_user.h
+    # Before rebuilding the library let's verify that the feature was present in the previous build.
+    grep -q mbedtls_nist_kw_wrap core/libtfpsacrypto.a
+    cmake -DGEN_FILES=OFF -DTF_PSA_CRYPTO_CONFIG_FILE=crypto_config_custom.h -DTF_PSA_CRYPTO_USER_CONFIG_FILE=crypto_config_user.h .
+    make
+    # Verify that MBEDTLS_NIST_KW_C was really disabled, i.e. crypto_config_user.h was included
+    # correctly in the build.
+    not grep -q mbedtls_nist_kw_wrap core/libtfpsacrypto.a
+
+    # Restore default crypto config file and remove generated ones
+    mv include/psa/crypto_config_default.h "$CRYPTO_CONFIG_H"
+    rm -f crypto_config_custom.h crypto_config_user.h
+}
+
+component_tf_psa_crypto_build_config_name () {
+    cp "$CRYPTO_CONFIG_H" include/psa/crypto_config_default.h
+    scripts/config.py full
+    cp "$CRYPTO_CONFIG_H" include/psa/crypto_config_full.h
+    cp include/psa/crypto_config_default.h "$CRYPTO_CONFIG_H"
+
+    msg "build: cmake out-of-source with full config"
+    cd "$OUT_OF_SOURCE_DIR"
+    cmake -DCMAKE_INSTALL_PREFIX="$OUT_OF_SOURCE_DIR/install_full" -DTF_PSA_CRYPTO_CONFIG_NAME=full "$TF_PSA_CRYPTO_ROOT_DIR"
+    cd "$TF_PSA_CRYPTO_ROOT_DIR"
+    cmake --build "$OUT_OF_SOURCE_DIR" --target tfpsacrypto
+
+    # Restore the default config file in the source tree as we need a sane
+    # one to build some PSA test data.
+    cp include/psa/crypto_config_default.h "$CRYPTO_CONFIG_H"
+    cmake --build "$OUT_OF_SOURCE_DIR"
+    cmake --build "$OUT_OF_SOURCE_DIR" --target install
+
+    cmp -s $OUT_OF_SOURCE_DIR/include/psa/crypto_config.h include/psa/crypto_config_full.h
+    cmp -s $OUT_OF_SOURCE_DIR/install_full/include/psa/crypto_config.h include/psa/crypto_config_full.h
+
+    rm -rf "$OUT_OF_SOURCE_DIR"
+    mv include/psa/crypto_config_default.h "$CRYPTO_CONFIG_H"
+    rm -f include/psa/crypto_config_full.h
+}
+
+component_tf_psa_crypto_build_config_options () {
+    msg "configure: cmake with TF_PSA_CRYPTO_CONFIG_BASE_FILE only"
+    cd "$OUT_OF_SOURCE_DIR"
+    cmake -DTF_PSA_CRYPTO_CONFIG_BASE_FILE=configs/crypto-config-symmetric-only.h \
+          "$TF_PSA_CRYPTO_ROOT_DIR"
+    cmp "$TF_PSA_CRYPTO_ROOT_DIR/configs/crypto-config-symmetric-only.h" \
+        include/psa/crypto_config.h
+
+    cd "$TF_PSA_CRYPTO_ROOT_DIR"
+    rm -rf "$OUT_OF_SOURCE_DIR"
+    launch_dir="$TF_PSA_CRYPTO_ROOT_DIR/cmake-config-launch"
+    mkdir "$launch_dir"
+    cd "$launch_dir"
+
+    msg "configure: resolve a base config relative to the launch directory"
+    cmake -H"$TF_PSA_CRYPTO_ROOT_DIR" -B"$OUT_OF_SOURCE_DIR" \
+        -DTF_PSA_CRYPTO_CONFIG_BASE_FILE=../configs/crypto-config-symmetric-only.h \
+        -DTF_PSA_CRYPTO_CONFIG_SET=PSA_WANT_ALG_MD5
+    grep '^#define PSA_WANT_ALG_MD5' \
+        "$OUT_OF_SOURCE_DIR/include/psa/crypto_config.h"
+
+    cd "$TF_PSA_CRYPTO_ROOT_DIR"
+    rm -rf "$OUT_OF_SOURCE_DIR" "$launch_dir"
+    mkdir "$OUT_OF_SOURCE_DIR"
+    cd "$OUT_OF_SOURCE_DIR"
+
+    msg "configure: reject TF_PSA_CRYPTO_CONFIG_FILE with transformations"
+    not cmake -DTF_PSA_CRYPTO_CONFIG_FILE=configs/crypto-config-symmetric-only.h \
+              -DTF_PSA_CRYPTO_CONFIG_SET=PSA_WANT_ALG_SHA_256 \
+              "$TF_PSA_CRYPTO_ROOT_DIR"
+
+    cd "$TF_PSA_CRYPTO_ROOT_DIR"
+    rm -rf "$OUT_OF_SOURCE_DIR"
+    mkdir "$OUT_OF_SOURCE_DIR"
+    cd "$OUT_OF_SOURCE_DIR"
+
+    msg "configure: reject a missing base configuration"
+    not cmake -DTF_PSA_CRYPTO_CONFIG_BASE_FILE=configs/does-not-exist.h \
+              "$TF_PSA_CRYPTO_ROOT_DIR"
+
+    cd "$TF_PSA_CRYPTO_ROOT_DIR"
+    rm -rf "$OUT_OF_SOURCE_DIR"
+    mkdir "$OUT_OF_SOURCE_DIR"
+    cd "$OUT_OF_SOURCE_DIR"
+
+    msg "configure: cmake with a false-like option name"
+    cmake -DTF_PSA_CRYPTO_CONFIG_SET=NO "$TF_PSA_CRYPTO_ROOT_DIR"
+    grep '^#define NO$' include/psa/crypto_config.h
+
+    cd "$TF_PSA_CRYPTO_ROOT_DIR"
+    rm -rf "$OUT_OF_SOURCE_DIR"
+    mkdir "$OUT_OF_SOURCE_DIR"
+    cd "$OUT_OF_SOURCE_DIR"
+
+    msg "configure: apply transformations to an overridden base config"
+    cmake \
+        -DTF_PSA_CRYPTO_CONFIG_BASE_FILE_OVERRIDE="$TF_PSA_CRYPTO_ROOT_DIR/configs/crypto-config-symmetric-only.h" \
+        -DTF_PSA_CRYPTO_CONFIG_UNSET=PSA_WANT_ALG_RIPEMD160 \
+        "$TF_PSA_CRYPTO_ROOT_DIR"
+    not grep -q '^#define PSA_WANT_ALG_RIPEMD160' \
+        include/psa/crypto_config.h
+    not grep -q '^#define PSA_WANT_KEY_TYPE_DH_KEY_PAIR_BASIC' \
+        include/psa/crypto_config.h
+
+    cd "$TF_PSA_CRYPTO_ROOT_DIR"
+    rm -rf "$OUT_OF_SOURCE_DIR"
+    mkdir "$OUT_OF_SOURCE_DIR"
+    cd "$OUT_OF_SOURCE_DIR"
+
+    msg "build: cmake with a base config, TF_PSA_CRYPTO_CONFIG_SET and TF_PSA_CRYPTO_CONFIG_UNSET"
+    cp "$TF_PSA_CRYPTO_ROOT_DIR/configs/crypto-config-symmetric-only.h" \
+       base_config.before
+    cmake -DTF_PSA_CRYPTO_CONFIG_BASE_FILE=configs/crypto-config-symmetric-only.h \
+          -DTF_PSA_CRYPTO_CONFIG_UNSET=PSA_WANT_ALG_RIPEMD160 \
+          '-DTF_PSA_CRYPTO_CONFIG_SET=PSA_WANT_KEY_TYPE_RAW_DATA;PSA_WANT_ALG_SHA_256=2' \
+          "$TF_PSA_CRYPTO_ROOT_DIR"
+
+    grep -E '^#define PSA_WANT_ALG_SHA_256[[:space:]]+2$' \
+         include/psa/crypto_config.h
+    grep -E '^#define PSA_WANT_KEY_TYPE_RAW_DATA[[:space:]]+1$' \
+         include/psa/crypto_config.h
+    not grep -q '^#define PSA_WANT_ALG_RIPEMD160' include/psa/crypto_config.h
+    cmp base_config.before \
+        "$TF_PSA_CRYPTO_ROOT_DIR/configs/crypto-config-symmetric-only.h"
+
+    msg "install: generated configuration works from the installed package"
+    install_dir="$OUT_OF_SOURCE_DIR/install"
+    cmake -DENABLE_PROGRAMS=OFF -DENABLE_TESTING=OFF \
+          -DCMAKE_INSTALL_PREFIX="$install_dir" .
+    cmake --build . --target install
+    cmp include/psa/crypto_config.h \
+        "$install_dir/include/psa/crypto_config.h"
+
+    mv include include.moved
+    mkdir consumer
+    cat >consumer/CMakeLists.txt <<EOF
+cmake_minimum_required(VERSION 3.5.1)
+project(consumer C)
+find_package(TF-PSA-Crypto REQUIRED CONFIG)
+add_executable(consumer
+    "$TF_PSA_CRYPTO_ROOT_DIR/programs/test/cmake_package_install/cmake_package_install.c")
+target_link_libraries(consumer PRIVATE TF-PSA-Crypto::tfpsacrypto)
+EOF
+    mkdir consumer-build
+    cd consumer-build
+    cmake -DCMAKE_PREFIX_PATH="$install_dir" ../consumer
+    cmake --build .
+    cd ..
+
+    cd "$TF_PSA_CRYPTO_ROOT_DIR"
+    rm -rf "$OUT_OF_SOURCE_DIR"
+
+    msg "configure: reject transformations in an in-tree build"
+    not cmake -DTF_PSA_CRYPTO_CONFIG_SET=NO .
+    rm -rf CMakeCache.txt CMakeFiles
+}
+
+component_tf_psa_crypto_install_with_destdir () {
+    msg "install: cmake tf-psa-crypto with DESTDIR staging"
+    TF_PSA_CRYPTO_ROOT_DIR="$PWD"
+    cd "$OUT_OF_SOURCE_DIR"
+    cmake -DGEN_FILES=ON -DENABLE_PROGRAMS=ON -DENABLE_TESTING=OFF -DUSE_SHARED_TF_PSA_CRYPTO_LIBRARY=ON -DCMAKE_INSTALL_PREFIX:PATH=/usr "$TF_PSA_CRYPTO_ROOT_DIR"
+    make
+
+    DESTDIR="$OUT_OF_SOURCE_DIR/stage" make install
+
+    install_lib_subdir="$(sed -n 's/^CMAKE_INSTALL_LIBDIR:PATH=//p' CMakeCache.txt)"
+    [ -n "$install_lib_subdir" ] # Failed to read CMAKE_INSTALL_LIBDIR from CMakeCache.txt
+
+    install_lib_path="$OUT_OF_SOURCE_DIR/stage/usr/${install_lib_subdir}"
+
+    [ -f "$install_lib_path/libtfpsacrypto.a" ]
+    if [[ "$OSTYPE" == darwin* ]]; then
+        [ -e "$install_lib_path/libtfpsacrypto.dylib" ]
+    else
+        [ -L "$install_lib_path/libtfpsacrypto.so" ]
+        [ -e "$install_lib_path/libtfpsacrypto.so" ]
+
+        versioned=( "$install_lib_path/libtfpsacrypto.so".+([0-9]) )
+        if [ "$QUIET" -eq 0 ]; then
+            declare -p versioned
+        fi
+        [ "${#versioned[@]}" -eq 1 ]
+        [ -L "${versioned[0]}" ]
+        [ -e "${versioned[0]}" ]
+    fi
+}
+
+component_tf_psa_crypto_build_programs_no_testing () {
+    # Verify that the type of builds performed by oss-fuzz don't get accidentally broken
+    msg "build: cmake with -DENABLE_PROGRAMS=ON and -DENABLE_TESTING=OFF"
+    cd "$OUT_OF_SOURCE_DIR"
+    cmake -DENABLE_PROGRAMS=ON -DENABLE_TESTING=OFF "$TF_PSA_CRYPTO_ROOT_DIR"
+    make
+}
